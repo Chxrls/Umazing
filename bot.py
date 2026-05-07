@@ -81,7 +81,7 @@ def error_embed(status: int, hint: str = "") -> discord.Embed:
         ),
         color=EMBED_ERROR_COLOR,
     )
-    embed.set_footer(text="umapyoi.net API")
+    embed.set_footer(text="Data from umapyoi.net")
     return embed
 
 
@@ -290,7 +290,7 @@ async def cmd_character(
         else:
             embed.add_field(name="Image", value="No images available.", inline=False)
 
-    embed.set_footer(text=embed.footer.text or "umapyoi.net API")
+    embed.set_footer(text=embed.footer.text or "Data from umapyoi.net")
     await interaction.followup.send(embed=embed)
 
 
@@ -389,7 +389,7 @@ async def cmd_card(
         alt_names = ", ".join(a["name_en"] for a in alts[:3])
         embed.set_footer(text=f"Close matches: {alt_names}")
     else:
-        embed.set_footer(text="umapyoi.net API")
+        embed.set_footer(text="Data from umapyoi.net")
 
     await interaction.followup.send(embed=embed)
 
@@ -500,7 +500,7 @@ async def cmd_umavoice(
         alt_names = ", ".join(a["name_en"] for a in alts[:3])
         embed.set_footer(text=f"Close matches: {alt_names}")
     else:
-        embed.set_footer(text="umapyoi.net API")
+        embed.set_footer(text="Via Umapyoi")
 
     await interaction.followup.send(embed=embed)
 
