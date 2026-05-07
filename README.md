@@ -21,7 +21,6 @@ A Discord bot for looking up **Umamusume: Pretty Derby** characters, support car
 cp .env.example .env
 # Edit .env and add your DISCORD_BOT_TOKEN
 ```
-
 ### 3. Run
 ```bash
 python bot.py

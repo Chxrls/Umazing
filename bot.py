@@ -15,6 +15,9 @@ try:
 except ImportError:
     _metrics = None  # type: ignore[assignment]
 
+# Music commands
+from music import register_music_commands, set_session as music_set_session
+
 
 def _record_request(status: int) -> None:
     if _metrics is not None:
@@ -49,8 +52,12 @@ log = logging.getLogger("umapyoi")
 
 
 intents = discord.Intents.default()
+intents.voice_states = True
 bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
+
+# Register music slash commands at import time
+register_music_commands(tree)
 
 # Reusable aiohttp session — created on_ready, closed on shutdown
 session: Optional[aiohttp.ClientSession] = None

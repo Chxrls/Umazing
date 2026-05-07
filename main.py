@@ -62,6 +62,10 @@ async def on_ready() -> None:
     import bot as bot_module
     bot_module.session = _http_session
 
+    # Inject the session into the music API module
+    import music.api as music_api
+    music_api.set_session(_http_session)
+
     # Populate character cache
     await refresh_character_cache()
 
