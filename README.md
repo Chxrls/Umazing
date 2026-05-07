@@ -16,18 +16,13 @@ A Discord bot for looking up **Umamusume: Pretty Derby** characters, support car
 - Python 3.10+
 - A Discord bot token ([create one here](https://discord.com/developers/applications))
 
-### 2. Install dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 3. Configure environment
+### 2. Configure environment
 ```bash
 cp .env.example .env
 # Edit .env and add your DISCORD_BOT_TOKEN
 ```
 
-### 4. Run
+### 3. Run
 ```bash
 python bot.py
 ```

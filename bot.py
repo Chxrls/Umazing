@@ -1,18 +1,4 @@
-"""
-Umapyoi Discord Bot
-====================
-A Discord bot providing Umamusume character info, support cards, and voice actor
-data via slash commands, backed by the umapyoi.net public REST API.
-
-API Base URL : https://umapyoi.net/api/v1/
-Rate Limits  : 10 req/s  ·  500 req/min  ·  7 200 req/hr
-               Keep these in mind when running the bot in busy servers.
-
-Requirements : Python 3.10+, discord.py 2.x, aiohttp 3.x, python-dotenv
-"""
-
 from __future__ import annotations
-
 import os
 import logging
 from difflib import SequenceMatcher
@@ -23,14 +9,11 @@ import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
-# ---------------------------------------------------------------------------
 # Configuration
-# ---------------------------------------------------------------------------
-
 load_dotenv()
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
-GUILD_ID = os.getenv("DISCORD_GUILD_ID")  # optional, speeds up dev sync
+GUILD_ID = os.getenv("DISCORD_GUILD_ID")  # optional
 
 if not TOKEN:
     raise RuntimeError(
@@ -42,15 +25,12 @@ API_BASE = "https://umapyoi.net/api/v1"
 GAMETORA_SUPPORT_URL = "https://gametora.com/umamusume/support-cards"
 
 # Embed theming
-EMBED_COLOR = 0xEE6FAB       # Sakura pink — fits the Umamusume brand
-EMBED_ERROR_COLOR = 0xFF4444  # Red for error states
+EMBED_COLOR = 0xEE6FAB # Sakura pink 
+EMBED_ERROR_COLOR = 0xFF4444  # Red (errors)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s │ %(levelname)-7s │ %(message)s")
 log = logging.getLogger("umapyoi")
 
-# ---------------------------------------------------------------------------
-# Bot & HTTP session setup
-# ---------------------------------------------------------------------------
 
 intents = discord.Intents.default()
 bot = discord.Client(intents=intents)
@@ -60,20 +40,9 @@ tree = app_commands.CommandTree(bot)
 session: Optional[aiohttp.ClientSession] = None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# API Helper Functions
-# ═══════════════════════════════════════════════════════════════════════════
+# API helper functions
 
 async def api_get(path: str) -> tuple[int, dict | list | None]:
-    """
-    Perform an async GET to the umapyoi.net API.
-
-    Returns (status_code, json_body). If the response is 204 No Content
-    (common for empty support-card lists) the body will be ``None``.
-
-    Rate-limit note: The API allows 10 req/s and 500 req/min.
-    This helper does not throttle requests — callers should be mindful.
-    """
     url = f"{API_BASE}/{path.lstrip('/')}"
     log.debug("GET %s", url)
     async with session.get(url) as resp:
@@ -98,9 +67,9 @@ def error_embed(status: int, hint: str = "") -> discord.Embed:
     return embed
 
 
-# ── Character name resolution ─────────────────────────────────────────────
+# Character name resolution 
 
-# We cache the character list in memory so every slash command doesn't
+# Cache the character list in memory so every slash command doesn't
 # re-fetch the full list. It's refreshed once on_ready.
 _character_cache: list[dict] = []
 
@@ -163,7 +132,7 @@ def resolve_character(name: str) -> tuple[dict | None, list[dict]]:
     return best, alternatives
 
 
-# ── Fetch helpers for each endpoint ───────────────────────────────────────
+# Helpers for each endpoints
 
 async def fetch_character_info(chara_id: int) -> tuple[int, dict | None]:
     """GET /character/<chara_id> — full character profile."""
@@ -195,12 +164,9 @@ async def fetch_va_socials(va_id: int) -> tuple[int, list | None]:
     return await api_get(f"/va/socials/{va_id}")
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Slash Command Definitions
-# ═══════════════════════════════════════════════════════════════════════════
+# For slash commands sections
 
-# ── /character ────────────────────────────────────────────────────────────
-
+# CHARACTER
 @tree.command(name="character", description="Look up an Umamusume character by name.")
 @app_commands.describe(
     name="Character name (e.g. 'Sakura Bakushin O')",
@@ -218,7 +184,7 @@ async def cmd_character(
 ):
     await interaction.response.defer()
 
-    # ── Resolve character name ──
+    # Resolve character name 
     match, alts = resolve_character(name)
     if match is None:
         embed = discord.Embed(
@@ -235,7 +201,7 @@ async def cmd_character(
     chara_id: int = match["id"]       # umapyoi internal row ID
     chara_name: str = match["name_en"]
 
-    # ── Fetch character detail to get game_id and other info ──
+    # Fetch character detail to get game_id and other info 
     status, info = await fetch_character_info(chara_id)
     if status != 200 or info is None:
         await interaction.followup.send(embed=error_embed(status))
@@ -260,13 +226,12 @@ async def cmd_character(
         alt_names = ", ".join(a["name_en"] for a in alts[:3])
         embed.set_footer(text=f"Close matches: {alt_names}")
 
-    # ── Determine which sections to include ──
 
     show_info = include_val in (None, "info")
     show_image = include_val in (None, "image")
     show_birthday = include_val in (None, "birthday")
 
-    # -- Info fields --
+    # Information field/s
     if show_info:
         embed.add_field(name="Japanese Name", value=info.get("name_jp", "—"), inline=True)
         embed.add_field(name="Grade", value=info.get("grade", "—"), inline=True)
@@ -286,7 +251,7 @@ async def cmd_character(
                 profile = profile[:397] + "…"
             embed.add_field(name="Profile", value=profile, inline=False)
 
-    # -- Birthday --
+    # Bdays
     if show_birthday:
         bday_m = info.get("birth_month")
         bday_d = info.get("birth_day")
@@ -295,7 +260,7 @@ async def cmd_character(
         else:
             embed.add_field(name="Birthday", value="Unknown", inline=True)
 
-    # -- Image --
+    # Image
     if show_image:
         img_status, img_data = await fetch_character_images(chara_id)
         if img_status == 200 and img_data:
@@ -310,7 +275,7 @@ async def cmd_character(
     await interaction.followup.send(embed=embed)
 
 
-# ── /card ─────────────────────────────────────────────────────────────────
+# GAME CARDS
 
 @tree.command(name="card", description="List support cards for an Umamusume character.")
 @app_commands.describe(
@@ -324,7 +289,7 @@ async def cmd_card(
 ):
     await interaction.response.defer()
 
-    # ── Resolve character name ──
+    # Resolve character name
     match, alts = resolve_character(character)
     if match is None:
         embed = discord.Embed(
@@ -349,7 +314,7 @@ async def cmd_card(
 
     game_id: int = char_info["game_id"]
 
-    # ── Fetch support cards ──
+    # Fetch support cards
     sc_status, cards = await fetch_support_cards(game_id)
     if sc_status == 204 or cards is None or len(cards) == 0:
         embed = discord.Embed(
@@ -409,7 +374,7 @@ async def cmd_card(
     await interaction.followup.send(embed=embed)
 
 
-# ── /umavoice ────────────────────────────────────────────────────────────
+# UMAVOICE
 
 @tree.command(name="umavoice", description="Find the voice actor for an Umamusume character.")
 @app_commands.describe(
@@ -421,7 +386,7 @@ async def cmd_umavoice(
 ):
     await interaction.response.defer()
 
-    # ── Resolve character name ──
+    # Resolve char name
     match, alts = resolve_character(character)
     if match is None:
         embed = discord.Embed(
@@ -446,7 +411,7 @@ async def cmd_umavoice(
 
     game_id: int = char_info["game_id"]
 
-    # ── Fetch VA IDs for this character ──
+    # Fetch VA IDs for each character
     va_status, va_ids = await fetch_va_ids_for_character(chara_id)
     if va_status != 200 or not va_ids:
         embed = discord.Embed(
@@ -461,15 +426,16 @@ async def cmd_umavoice(
     # Typically a character has one VA, but the API returns a list
     va_id = va_ids[0]
 
-    # ── Fetch VA info ──
+    # VA inf
     info_status, va_info = await fetch_va_info(va_id)
     if info_status != 200 or va_info is None:
         await interaction.followup.send(embed=error_embed(info_status))
         return
 
-    # ── Fetch VA socials ──
+    # VA Soc
     soc_status, socials = await fetch_va_socials(va_id)
-    # Socials may legitimately be empty
+
+    # If socials are empty
     if soc_status != 200:
         socials = []
 
@@ -518,9 +484,7 @@ async def cmd_umavoice(
     await interaction.followup.send(embed=embed)
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Bot Lifecycle Events
-# ═══════════════════════════════════════════════════════════════════════════
+# Bot events
 
 @bot.event
 async def on_ready():
@@ -556,9 +520,7 @@ async def close_session():
         session = None
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Global Error Handler
-# ═══════════════════════════════════════════════════════════════════════════
+# Global error handler
 
 @tree.error
 async def on_app_command_error(
@@ -586,9 +548,7 @@ async def on_app_command_error(
         pass  # Interaction may have expired
 
 
-# ═══════════════════════════════════════════════════════════════════════════
-# Entry Point
-# ═══════════════════════════════════════════════════════════════════════════
+# Entry point
 
 def main():
     async def runner():
