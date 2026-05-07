@@ -1,0 +1,5 @@
+# nixpacks.toml — Railway build configuration
+# Installs system-level binaries that pip cannot provide.
+
+[phases.setup]
+nixPkgs = ["ffmpeg", "yt-dlp"]

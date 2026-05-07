@@ -21,21 +21,13 @@ import discord
 log = logging.getLogger("umapyoi.music.player")
 
 # ─── Resolve binary paths at import time ─────────────────────────────────────
-# shutil.which() uses the current PATH; if the shell hasn't been restarted yet
-# after a winget install we fall back to the known WinGet package locations.
+# shutil.which() locates the executable on the system PATH.
+# On Railway/Linux: ffmpeg and yt-dlp are installed via nixpacks.toml.
+# On Windows (local dev): installed via winget.
+# Falls back to bare command name so discord.py gives a clear error if missing.
 
-_FFMPEG_FALLBACK = (
-    r"C:\Users\Charls\AppData\Local\Microsoft\WinGet\Packages"
-    r"\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe"
-    r"\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"
-)
-_YTDLP_FALLBACK = (
-    r"C:\Users\Charls\AppData\Local\Microsoft\WinGet\Packages"
-    r"\yt-dlp.yt-dlp_Microsoft.Winget.Source_8wekyb3d8bbwe\yt-dlp.exe"
-)
-
-FFMPEG_EXE = shutil.which("ffmpeg") or _FFMPEG_FALLBACK
-YTDLP_EXE  = shutil.which("yt-dlp") or _YTDLP_FALLBACK
+FFMPEG_EXE: str = shutil.which("ffmpeg") or "ffmpeg"
+YTDLP_EXE:  str = shutil.which("yt-dlp") or "yt-dlp"
 
 log.info("ffmpeg  → %s", FFMPEG_EXE)
 log.info("yt-dlp  → %s", YTDLP_EXE)
