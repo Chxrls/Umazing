@@ -9,6 +9,22 @@ import discord
 from discord import app_commands
 from dotenv import load_dotenv
 
+# Metrics — imported lazily to avoid circular import when web.py is not present
+try:
+    from web import metrics as _metrics
+except ImportError:
+    _metrics = None  # type: ignore[assignment]
+
+
+def _record_request(status: int) -> None:
+    if _metrics is not None:
+        _metrics.record_request(status)
+
+
+def _record_command(name: str) -> None:
+    if _metrics is not None:
+        _metrics.record_command(name)
+
 # Configuration
 load_dotenv()
 
@@ -46,10 +62,12 @@ async def api_get(path: str) -> tuple[int, dict | list | None]:
     url = f"{API_BASE}/{path.lstrip('/')}"
     log.debug("GET %s", url)
     async with session.get(url) as resp:
-        if resp.status == 204:
+        status = resp.status
+        _record_request(status)
+        if status == 204:
             return 204, None
-        if resp.status != 200:
-            return resp.status, None
+        if status != 200:
+            return status, None
         return 200, await resp.json()
 
 
@@ -182,6 +200,7 @@ async def cmd_character(
     name: str,
     include: Optional[app_commands.Choice[str]] = None,
 ):
+    _record_command("character")
     await interaction.response.defer()
 
     # Resolve character name 
@@ -287,6 +306,7 @@ async def cmd_card(
     character: str,
     info: Optional[bool] = False,
 ):
+    _record_command("card")
     await interaction.response.defer()
 
     # Resolve character name
@@ -384,6 +404,7 @@ async def cmd_umavoice(
     interaction: discord.Interaction,
     character: str,
 ):
+    _record_command("umavoice")
     await interaction.response.defer()
 
     # Resolve char name
@@ -486,20 +507,19 @@ async def cmd_umavoice(
 
 # Bot events
 
-@bot.event
-async def on_ready():
-    global session
+# NOTE: on_ready is registered by main.py when running as a Web Service.
+# The standalone __main__ block below registers its own on_ready for
+# direct testing (python bot.py) without the Flask dashboard.
 
-    # Create a shared aiohttp session with a descriptive User-Agent
+
+async def _standalone_on_ready():
+    """on_ready used only when bot.py is run directly (not via main.py)."""
+    global session
     session = aiohttp.ClientSession(
         headers={"User-Agent": "UmapyoiDiscordBot/1.0 (aiohttp)"},
         timeout=aiohttp.ClientTimeout(total=15),
     )
-
-    # Populate the character cache
     await refresh_character_cache()
-
-    # Sync slash commands
     if GUILD_ID:
         guild = discord.Object(id=int(GUILD_ID))
         tree.copy_global_to(guild=guild)
@@ -508,7 +528,6 @@ async def on_ready():
     else:
         await tree.sync()
         log.info("Slash commands synced globally (may take up to 1 hour).")
-
     log.info("Bot ready as %s (ID %s).", bot.user, bot.user.id)
 
 
@@ -548,9 +567,12 @@ async def on_app_command_error(
         pass  # Interaction may have expired
 
 
-# Entry point
+# Entry point (standalone — without Flask dashboard)
 
 def main():
+    """Run the bot standalone (no Flask dashboard). Used for local testing."""
+    bot.event(_standalone_on_ready)  # register the standalone on_ready
+
     async def runner():
         async with bot:
             try:
