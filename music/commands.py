@@ -332,7 +332,10 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
         album: Optional[str] = None,
         version: Optional[str] = None,
     ):
-        await interaction.response.defer()
+        try:
+            await interaction.response.defer()
+        except discord.NotFound:
+            return  # stale interaction (bot reconnected); silently discard
         guild  = interaction.guild
         member = interaction.user
 
@@ -537,7 +540,10 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
         category: app_commands.Choice[str],
         character: Optional[str] = None,
     ):
-        await interaction.response.defer()
+        try:
+            await interaction.response.defer()
+        except discord.NotFound:
+            return  # stale interaction (bot reconnected); silently discard
         cat = category.value
 
         # ── album ──────────────────────────────────────────────────────────────

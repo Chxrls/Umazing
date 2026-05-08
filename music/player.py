@@ -22,12 +22,42 @@ log = logging.getLogger("umapyoi.music.player")
 
 # ─── Resolve binary paths at import time ─────────────────────────────────────
 # shutil.which() locates the executable on the system PATH.
-# On Railway/Linux: ffmpeg and yt-dlp are installed via nixpacks.toml.
-# On Windows (local dev): installed via winget.
-# Falls back to bare command name so discord.py gives a clear error if missing.
+# On Railway/Linux: ffmpeg and yt-dlp are installed via nixpacks.toml into the
+# Nix store (/nix/store/.../bin/), which may not be on the Python PATH.
+# We do a deeper search so discord.py never gets a bare "ffmpeg" string.
 
-FFMPEG_EXE: str = shutil.which("ffmpeg") or "ffmpeg"
-YTDLP_EXE:  str = shutil.which("yt-dlp") or "yt-dlp"
+import os
+import glob
+
+
+def _find_exe(name: str) -> str:
+    """Find an executable by name, falling back to common Linux/Nix paths."""
+    found = shutil.which(name)
+    if found:
+        return found
+    # Common static install locations on Railway / Linux
+    for candidate in [
+        f"/usr/bin/{name}",
+        f"/usr/local/bin/{name}",
+        f"/app/.venv/bin/{name}",
+    ]:
+        if os.path.isfile(candidate) and os.access(candidate, os.X_OK):
+            return candidate
+    # Nix store (Railway nixpacks): /nix/store/*/<name>/bin/<name>
+    nix_glob = f"/nix/store/*/{name}/bin/{name}"
+    matches = glob.glob(nix_glob)
+    if matches:
+        return matches[0]
+    # Last-ditch: search entire /nix/store for the binary
+    nix_glob2 = f"/nix/store/*/bin/{name}"
+    matches2 = glob.glob(nix_glob2)
+    if matches2:
+        return matches2[0]
+    return name  # let discord.py produce the clear error
+
+
+FFMPEG_EXE: str = _find_exe("ffmpeg")
+YTDLP_EXE:  str = _find_exe("yt-dlp")
 
 log.info("ffmpeg  → %s", FFMPEG_EXE)
 log.info("yt-dlp  → %s", YTDLP_EXE)
@@ -122,6 +152,9 @@ class GuildPlayer:
             bot_loop.call_soon_threadsafe(self._advance, bot_loop)
 
         if self.voice_client and self.voice_client.is_connected():
+            # Stop any currently playing audio before starting new track
+            if self.voice_client.is_playing() or self.voice_client.is_paused():
+                self.voice_client.stop()
             self.voice_client.play(source, after=after_play)
         else:
             log.warning("VC disconnected before play for '%s'", track.name_en)

@@ -1,5 +1,11 @@
 # nixpacks.toml — Railway build configuration
 # Installs system-level binaries that pip cannot provide.
+# NOTE: yt-dlp is installed via pip (requirements.txt), not here.
 
 [phases.setup]
-nixPkgs = ["ffmpeg", "yt-dlp"]
+nixPkgs = ["ffmpeg"]
+
+[variables]
+# Ensure the Nix profile bin directory is always on PATH at runtime.
+# nixpacks normally adds this, but we make it explicit as a safety net.
+PATH = "/root/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin"
