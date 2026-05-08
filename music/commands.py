@@ -337,8 +337,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
     ):
         try:
             await interaction.response.defer()
-        except discord.NotFound:
-            return  # stale interaction (bot reconnected); silently discard
+        except (discord.NotFound, discord.HTTPException):
+            return  # stale or already acknowledged interaction; silently discard
         guild  = interaction.guild
         member = interaction.user
 

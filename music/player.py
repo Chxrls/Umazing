@@ -69,6 +69,7 @@ YTDLP_OPTS = [
     "--get-url",
     "--no-warnings",
     "--quiet",
+    "--extractor-args", "youtube:player_client=android",
 ]
 
 FFMPEG_OPTS = {

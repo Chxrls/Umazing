@@ -208,7 +208,10 @@ async def cmd_character(
     include: Optional[app_commands.Choice[str]] = None,
 ):
     _record_command("character")
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except (discord.NotFound, discord.HTTPException):
+        return
 
     # Resolve character name 
     match, alts = resolve_character(name)
@@ -314,7 +317,10 @@ async def cmd_card(
     info: Optional[bool] = False,
 ):
     _record_command("card")
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except (discord.NotFound, discord.HTTPException):
+        return
 
     # Resolve character name
     match, alts = resolve_character(character)
@@ -412,7 +418,10 @@ async def cmd_umavoice(
     character: str,
 ):
     _record_command("umavoice")
-    await interaction.response.defer()
+    try:
+        await interaction.response.defer()
+    except (discord.NotFound, discord.HTTPException):
+        return
 
     # Resolve char name
     match, alts = resolve_character(character)
