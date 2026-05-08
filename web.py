@@ -22,6 +22,9 @@ import threading
 from collections import defaultdict, deque
 from datetime import datetime, timezone
 from functools import wraps
+import logging
+import queue
+import json
 
 from flask import (
     Flask,
@@ -138,6 +141,53 @@ class MetricsStore:
 
 # Singleton — imported by bot.py
 metrics = MetricsStore()
+
+# ---------------------------------------------------------------------------
+# Real-time Log Collector for SSE
+# ---------------------------------------------------------------------------
+
+class LogCollector(logging.Handler):
+    def __init__(self, maxlen=300):
+        super().__init__()
+        self.history = deque(maxlen=maxlen)
+        self.clients: list[queue.Queue] = []
+        self._lock = threading.Lock()
+        
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            log_entry = {
+                "ts": datetime.fromtimestamp(record.created).strftime("%H:%M:%S"),
+                "level": record.levelname,
+                "name": record.name,
+                "msg": msg
+            }
+            with self._lock:
+                self.history.append(log_entry)
+                for q in self.clients:
+                    try:
+                        q.put_nowait(log_entry)
+                    except queue.Full:
+                        pass
+        except Exception:
+            self.handleError(record)
+
+    def subscribe(self) -> tuple[queue.Queue, list[dict]]:
+        q = queue.Queue(maxsize=100)
+        with self._lock:
+            self.clients.append(q)
+            hist = list(self.history)
+        return q, hist
+
+    def unsubscribe(self, q: queue.Queue):
+        with self._lock:
+            if q in self.clients:
+                self.clients.remove(q)
+
+log_collector = LogCollector()
+log_collector.setFormatter(logging.Formatter("%(message)s"))
+# Attach it to the root logger so we get EVERYTHING (Flask, bot.py, etc)
+logging.getLogger().addHandler(log_collector)
 
 # ---------------------------------------------------------------------------
 # Bot / event-loop references (injected by main.py after startup)
@@ -266,3 +316,31 @@ def api_send_message():
         return jsonify({"error": "Bot timed out sending the message."}), 504
     except Exception as exc:  # noqa: BLE001
         return jsonify({"error": f"Unexpected error: {exc}"}), 500
+
+@app.route("/api/logs/stream")
+@login_required
+def api_logs_stream():
+    """SSE endpoint to stream logs to the dashboard in real-time."""
+    def event_stream():
+        q, hist = log_collector.subscribe()
+        try:
+            # Send recent history first
+            for entry in hist:
+                yield f"data: {json.dumps(entry)}\n\n"
+            
+            # Loop forever waiting for new logs
+            while True:
+                try:
+                    entry = q.get(timeout=15)
+                    yield f"data: {json.dumps(entry)}\n\n"
+                except queue.Empty:
+                    # Send a keep-alive ping so the browser doesn't drop the connection
+                    yield ": keep-alive\n\n"
+        finally:
+            log_collector.unsubscribe(q)
+            
+    response = Response(event_stream(), mimetype="text/event-stream")
+    # Prevent buffering in proxy servers like nginx (if any)
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["X-Accel-Buffering"] = "no"
+    return response

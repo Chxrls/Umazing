@@ -150,6 +150,32 @@
     /* Spinner */
     @keyframes spin{to{transform:rotate(360deg)}}
     .spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}
+
+    /* Console Tab */
+    .console-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+    .console-actions{display:flex;gap:.5rem}
+    .console-btn{
+      background:rgba(255,255,255,0.05);border:1px solid var(--border);border-radius:6px;
+      color:var(--text);font-size:.8rem;padding:.4rem .8rem;cursor:pointer;
+      transition:background .2s, border-color .2s;display:flex;align-items:center;gap:.4rem;
+    }
+    .console-btn:hover{background:rgba(255,255,255,0.1)}
+    .console-btn.active{background:var(--pink-dim);color:var(--pink);border-color:var(--pink)}
+    .console-window{
+      background:#000;border:1px solid var(--border);border-radius:10px;
+      padding:1rem;height:calc(100vh - 180px);overflow-y:auto;
+      font-family:'Fira Code', 'JetBrains Mono', Consolas, monospace;
+      font-size:.85rem;line-height:1.6;box-shadow:inset 0 4px 20px rgba(0,0,0,.5);
+    }
+    .log-entry{display:flex;gap:.75rem;padding:.15rem 0;word-break:break-word;border-bottom:1px solid rgba(255,255,255,0.02)}
+    .log-ts{color:var(--muted);flex-shrink:0}
+    .log-level{font-weight:700;flex-shrink:0;width:60px}
+    .log-INFO{color:#60a5fa}
+    .log-WARNING{color:#fbbf24}
+    .log-ERROR{color:#f87171}
+    .log-DEBUG{color:#94a3b8}
+    .log-name{color:var(--violet);opacity:0.8;flex-shrink:0}
+    .log-msg{color:#f1f5f9;white-space:pre-wrap}
   </style>
 </head>
 <body>
@@ -169,6 +195,10 @@
     <button class="nav-item" id="nav-interactions" onclick="switchTab('interactions')">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
       Interactions
+    </button>
+    <button class="nav-item" id="nav-console" onclick="switchTab('console')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      Console
     </button>
 
     <div class="sidebar-footer">
@@ -274,6 +304,29 @@
             <div class="empty-state">No announcements sent yet.</div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== CONSOLE TAB ===== -->
+    <div class="tab-panel" id="tab-console">
+      <div class="console-header">
+        <div>
+          <h1 class="page-title">Live Console</h1>
+          <p class="page-sub">Real-time application logs via SSE</p>
+        </div>
+        <div class="console-actions">
+          <button class="console-btn active" id="btn-autoscroll" onclick="toggleAutoScroll()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            Auto-Scroll
+          </button>
+          <button class="console-btn" onclick="clearConsole()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            Clear
+          </button>
+        </div>
+      </div>
+      <div class="console-window" id="console-window">
+        <div class="empty-state">Connecting to log stream...</div>
       </div>
     </div>
 
@@ -492,6 +545,70 @@ function showFeedback(el, msg, ok) {
   el.style.display = 'block';
   setTimeout(() => { el.style.display = 'none'; }, 4000);
 }
+
+// ─── Live Console (SSE) ───────────────────────────────────────────────────────
+let autoScroll = true;
+let consoleStream = null;
+const consoleWindow = document.getElementById('console-window');
+
+function toggleAutoScroll() {
+  autoScroll = !autoScroll;
+  document.getElementById('btn-autoscroll').classList.toggle('active', autoScroll);
+  if (autoScroll) {
+    consoleWindow.scrollTop = consoleWindow.scrollHeight;
+  }
+}
+
+function clearConsole() {
+  consoleWindow.innerHTML = '<div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-level log-INFO">INFO</span><span class="log-msg">Console cleared.</span></div>';
+}
+
+function initConsoleStream() {
+  if (consoleStream) return;
+  consoleWindow.innerHTML = ''; // clear loading state
+  consoleStream = new EventSource('/api/logs/stream');
+  
+  consoleStream.onmessage = function(event) {
+    try {
+      const data = JSON.parse(event.data);
+      const div = document.createElement('div');
+      div.className = 'log-entry';
+      div.innerHTML = `
+        <span class="log-ts">${data.ts}</span>
+        <span class="log-level log-${data.level}">${data.level}</span>
+        <span class="log-name">[${data.name}]</span>
+        <span class="log-msg">${escHtml(data.msg)}</span>
+      `;
+      consoleWindow.appendChild(div);
+      
+      // Limit DOM nodes to prevent lag
+      if (consoleWindow.childElementCount > 400) {
+        consoleWindow.removeChild(consoleWindow.firstElementChild);
+      }
+      
+      if (autoScroll) {
+        consoleWindow.scrollTop = consoleWindow.scrollHeight;
+      }
+    } catch(e) {} // ignore invalid json (like keep-alive ping)
+  };
+  
+  consoleStream.onerror = function() {
+    const div = document.createElement('div');
+    div.className = 'log-entry';
+    div.innerHTML = `<span class="log-ts">${new Date().toLocaleTimeString()}</span><span class="log-level log-ERROR">ERROR</span><span class="log-msg" style="color:var(--error)">Connection lost. Reconnecting...</span>`;
+    consoleWindow.appendChild(div);
+    if(autoScroll) consoleWindow.scrollTop = consoleWindow.scrollHeight;
+  };
+}
+
+// Connect to console stream when the tab is opened to save resources
+const originalSwitchTab = switchTab;
+switchTab = function(name) {
+  originalSwitchTab(name);
+  if (name === 'console') {
+    initConsoleStream();
+  }
+};
 </script>
 </body>
 </html>
