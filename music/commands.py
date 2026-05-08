@@ -176,7 +176,7 @@ class AlbumBrowserView(discord.ui.View):
         embed = _album_detail_embed(album)
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-        # Auto-play first track if in a VC
+        # Auto-play / queue all album tracks if user is in a VC
         guild = interaction.guild
         member = interaction.user
         if guild and isinstance(member, discord.Member) and member.voice:
@@ -185,10 +185,13 @@ class AlbumBrowserView(discord.ui.View):
             tracks = album.get("_tracks", [])
             if tracks:
                 loop = asyncio.get_event_loop()
-                info = _track_to_info(tracks[0], album)
-                for t in tracks[1:]:
-                    player.queue.append(_track_to_info(t, album))
-                await player.play_track(info, loop)
+                all_infos = [_track_to_info(t, album) for t in tracks]
+                if player.is_playing() or player.is_paused():
+                    player.queue.extend(all_infos)
+                else:
+                    for t in all_infos[1:]:
+                        player.queue.append(t)
+                    await player.play_track(all_infos[0], loop)
 
     async def _prev(self, interaction: discord.Interaction):
         self.page = max(0, self.page - 1)
@@ -393,21 +396,36 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
                 await interaction.followup.send(embed=error_embed("This album has no tracks."))
                 return
 
-            first = _track_to_info(tracks[0], alb)
-            for t in tracks[1:]:
-                player.queue.append(_track_to_info(t, alb))
+            all_infos = [_track_to_info(t, alb) for t in tracks]
 
-            embed = discord.Embed(
-                title="🎵 Now Playing",
-                description=f"**{first.name_en}**",
-                color=C_PLAY,
-            )
-            embed.add_field(name="Album", value=first.album_name)
-            embed.add_field(name="Queue", value=f"{len(player.queue)} tracks queued")
-            if first.album_art:
-                embed.set_thumbnail(url=first.album_art)
+            if player.is_playing() or player.is_paused():
+                # Something is already playing — queue the whole album
+                player.queue.extend(all_infos)
+                embed = discord.Embed(
+                    title="➕ Added to Queue",
+                    description=f"**{alb.get('name_en', 'Unknown Album')}**",
+                    color=C_PLAY,
+                )
+                embed.add_field(name="Tracks Queued", value=str(len(all_infos)))
+                embed.add_field(name="Queue Length", value=str(len(player.queue)))
+                if all_infos[0].album_art:
+                    embed.set_thumbnail(url=all_infos[0].album_art)
+            else:
+                # Nothing playing — start immediately
+                for t in all_infos[1:]:
+                    player.queue.append(t)
+                embed = discord.Embed(
+                    title="🎵 Now Playing",
+                    description=f"**{all_infos[0].name_en}**",
+                    color=C_PLAY,
+                )
+                embed.add_field(name="Album", value=all_infos[0].album_name)
+                embed.add_field(name="Queue", value=f"{len(player.queue)} tracks queued")
+                if all_infos[0].album_art:
+                    embed.set_thumbnail(url=all_infos[0].album_art)
+                await player.play_track(all_infos[0], loop)
+
             await interaction.followup.send(embed=embed)
-            await player.play_track(first, loop)
             return
 
         # ── /play title:<song> [version:<char|number>] ────────────────────────
@@ -458,16 +476,24 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
                 chosen = all_tracks[idx]
                 await player.connect(vc_channel)
                 info = _track_to_info(chosen)
-                embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
-                embed.add_field(name="Song",    value=info.name_en)
-                embed.add_field(name="Album",   value=info.album_name)
-                embed.add_field(name="Version", value=f"#{int(version)} — {info.album_name}")
-                if info.singers:
-                    embed.add_field(name="Characters", value=info.singers, inline=False)
+                if player.is_playing() or player.is_paused():
+                    player.queue.append(info)
+                    embed = discord.Embed(title="➕ Added to Queue", color=C_PLAY)
+                    embed.add_field(name="Song",     value=info.name_en)
+                    embed.add_field(name="Album",    value=info.album_name)
+                    embed.add_field(name="Version",  value=f"#{int(version)} — {info.album_name}")
+                    embed.add_field(name="Position", value=f"#{len(player.queue)} in queue")
+                else:
+                    embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
+                    embed.add_field(name="Song",    value=info.name_en)
+                    embed.add_field(name="Album",   value=info.album_name)
+                    embed.add_field(name="Version", value=f"#{int(version)} — {info.album_name}")
+                    if info.singers:
+                        embed.add_field(name="Characters", value=info.singers, inline=False)
+                    await player.play_track(info, loop)
                 if info.album_art:
                     embed.set_thumbnail(url=info.album_art)
                 await interaction.followup.send(embed=embed)
-                await player.play_track(info, loop)
                 return
 
             # ── version is a character name → filter by character ─────────────
@@ -512,15 +538,25 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
             await player.connect(vc_channel)
             info = _track_to_info(all_tracks[0])
 
-            embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
-            embed.add_field(name="Song",  value=info.name_en)
-            embed.add_field(name="Album", value=info.album_name)
-            if version:
-                embed.add_field(name="Character Version", value=version.title())
+            if player.is_playing() or player.is_paused():
+                player.queue.append(info)
+                embed = discord.Embed(title="➕ Added to Queue", color=C_PLAY)
+                embed.add_field(name="Song",     value=info.name_en)
+                embed.add_field(name="Album",    value=info.album_name)
+                embed.add_field(name="Position", value=f"#{len(player.queue)} in queue")
+                if version:
+                    embed.add_field(name="Character Version", value=version.title())
+            else:
+                embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
+                embed.add_field(name="Song",  value=info.name_en)
+                embed.add_field(name="Album", value=info.album_name)
+                if version:
+                    embed.add_field(name="Character Version", value=version.title())
+                await player.play_track(info, loop)
+
             if info.album_art:
                 embed.set_thumbnail(url=info.album_art)
             await interaction.followup.send(embed=embed)
-            await player.play_track(info, loop)
             return
 
     # ── /list ─────────────────────────────────────────────────────────────────
@@ -627,65 +663,74 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
             description="Use the buttons below to control playback.",
             color=C_PLAY,
         )
-        await interaction.response.send_message(embed=embed, view=ControlsView())
+        try:
+            await interaction.response.send_message(embed=embed, view=ControlsView())
+        except discord.NotFound:
+            return  # stale interaction after reconnect
 
     # ── /nowplaying ────────────────────────────────────────────────────────────
 
     @tree.command(name="nowplaying", description="Show the currently playing track.")
     async def cmd_nowplaying(interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)
-            return
+        try:
+            if not interaction.guild:
+                await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)
+                return
 
-        player  = get_player(interaction.guild.id)
-        current = player.current
+            player  = get_player(interaction.guild.id)
+            current = player.current
 
-        if not current:
-            await interaction.response.send_message(
-                embed=error_embed("Nothing is currently playing."), ephemeral=True
-            )
-            return
+            if not current:
+                await interaction.response.send_message(
+                    embed=error_embed("Nothing is currently playing."), ephemeral=True
+                )
+                return
 
-        elapsed  = player.elapsed_seconds()
-        bar      = _progress_bar(elapsed, current.runtime)
-        time_str = f"`{_fmt_time(elapsed)}` {bar} `{_fmt_time(current.runtime)}`"
+            elapsed  = player.elapsed_seconds()
+            bar      = _progress_bar(elapsed, current.runtime)
+            time_str = f"`{_fmt_time(elapsed)}` {bar} `{_fmt_time(current.runtime)}`"
 
-        embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
-        embed.add_field(name="Song",       value=current.name_en,    inline=False)
-        embed.add_field(name="Album",      value=current.album_name, inline=True)
-        embed.add_field(name="Characters", value=current.singers or "—", inline=True)
-        embed.add_field(name="Progress",   value=time_str,           inline=False)
-        if current.is_preview:
-            embed.add_field(name="⚠️ Preview Only", value="Full audio unavailable via yt-dlp.", inline=False)
-        if current.album_art:
-            embed.set_thumbnail(url=current.album_art)
-        embed.set_footer(text=f"Loop: {'ON' if player.loop else 'OFF'} · Shuffle: {'ON' if player.shuffle else 'OFF'}")
-        await interaction.response.send_message(embed=embed)
+            embed = discord.Embed(title="🎵 Now Playing", color=C_PLAY)
+            embed.add_field(name="Song",       value=current.name_en,    inline=False)
+            embed.add_field(name="Album",      value=current.album_name, inline=True)
+            embed.add_field(name="Characters", value=current.singers or "—", inline=True)
+            embed.add_field(name="Progress",   value=time_str,           inline=False)
+            if current.is_preview:
+                embed.add_field(name="⚠️ Preview Only", value="Full audio unavailable via yt-dlp.", inline=False)
+            if current.album_art:
+                embed.set_thumbnail(url=current.album_art)
+            embed.set_footer(text=f"Loop: {'ON' if player.loop else 'OFF'} · Shuffle: {'ON' if player.shuffle else 'OFF'}")
+            await interaction.response.send_message(embed=embed)
+        except discord.NotFound:
+            return  # stale interaction after reconnect
 
     # ── /queue ─────────────────────────────────────────────────────────────────
 
     @tree.command(name="queue", description="Show the current playback queue.")
     async def cmd_queue(interaction: discord.Interaction):
-        if not interaction.guild:
-            await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)
-            return
+        try:
+            if not interaction.guild:
+                await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)
+                return
 
-        player  = get_player(interaction.guild.id)
-        queue   = player.queue
-        current = player.current
+            player  = get_player(interaction.guild.id)
+            queue   = player.queue
+            current = player.current
 
-        if not current and not queue:
-            await interaction.response.send_message(
-                embed=error_embed("The queue is empty."), ephemeral=True
-            )
-            return
+            if not current and not queue:
+                await interaction.response.send_message(
+                    embed=error_embed("The queue is empty."), ephemeral=True
+                )
+                return
 
-        items: list[str] = []
-        if current:
-            items.append(f"▶️ **{current.name_en}** — {current.album_name}")
-        for i, t in enumerate(queue):
-            items.append(f"`{i+1}.` {t.name_en} — {t.album_name}")
+            items: list[str] = []
+            if current:
+                items.append(f"▶️ **{current.name_en}** — {current.album_name}")
+            for i, t in enumerate(queue):
+                items.append(f"`{i+1}.` {t.name_en} — {t.album_name}")
 
-        pages = _paginate_items(items, "📋 Queue", "tracks", C_LIST)
-        view  = PaginatedEmbedView(pages)
-        await interaction.response.send_message(embed=pages[0], view=view)
+            pages = _paginate_items(items, "📋 Queue", "tracks", C_LIST)
+            view  = PaginatedEmbedView(pages)
+            await interaction.response.send_message(embed=pages[0], view=view)
+        except discord.NotFound:
+            return  # stale interaction after reconnect
