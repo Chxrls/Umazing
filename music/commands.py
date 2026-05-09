@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import Optional
+from typing import Optional, Callable
 
 import discord
 from discord import app_commands
@@ -318,7 +318,7 @@ class ControlsView(discord.ui.View):
 # Command registration helper
 # ═══════════════════════════════════════════════════════════════════════════
 
-def register_music_commands(tree: app_commands.CommandTree) -> None:
+def register_music_commands(tree: app_commands.CommandTree, record_command: Optional[Callable] = None) -> None:
     """Call once from bot setup_hook to add all music commands."""
 
     # ── /play ────────────────────────────────────────────────────────────────
@@ -335,6 +335,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
         album: Optional[str] = None,
         version: Optional[str] = None,
     ):
+        if record_command:
+            record_command("play", interaction)
         try:
             await interaction.response.defer()
         except (discord.NotFound, discord.HTTPException):
@@ -576,6 +578,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
         category: app_commands.Choice[str],
         character: Optional[str] = None,
     ):
+        if record_command:
+            record_command("list", interaction)
         try:
             await interaction.response.defer()
         except discord.NotFound:
@@ -658,6 +662,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
 
     @tree.command(name="controls", description="Show persistent playback controls.")
     async def cmd_controls(interaction: discord.Interaction):
+        if record_command:
+            record_command("controls", interaction)
         embed = discord.Embed(
             title="🎛️ Playback Controls",
             description="Use the buttons below to control playback.",
@@ -672,6 +678,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
 
     @tree.command(name="nowplaying", description="Show the currently playing track.")
     async def cmd_nowplaying(interaction: discord.Interaction):
+        if record_command:
+            record_command("nowplaying", interaction)
         try:
             if not interaction.guild:
                 await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)
@@ -708,6 +716,8 @@ def register_music_commands(tree: app_commands.CommandTree) -> None:
 
     @tree.command(name="queue", description="Show the current playback queue.")
     async def cmd_queue(interaction: discord.Interaction):
+        if record_command:
+            record_command("queue", interaction)
         try:
             if not interaction.guild:
                 await interaction.response.send_message(embed=error_embed("Guild only command."), ephemeral=True)

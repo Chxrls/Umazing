@@ -26,6 +26,8 @@ import logging
 import queue
 import json
 
+from db import history_db
+
 from flask import (
     Flask,
     Response,
@@ -35,6 +37,7 @@ from flask import (
     request,
     session,
     url_for,
+    send_from_directory,
 )
 
 app = Flask(__name__)
@@ -220,6 +223,10 @@ def login_required(f):
 # Routes
 # ---------------------------------------------------------------------------
 
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
+    return send_from_directory(os.path.join(app.root_path, 'assets'), filename)
+
 @app.route("/health")
 def health():
     return jsonify({"status": "ok", "ts": int(time.time())})
@@ -344,3 +351,21 @@ def api_logs_stream():
     response.headers["Cache-Control"] = "no-cache"
     response.headers["X-Accel-Buffering"] = "no"
     return response
+
+@app.route("/api/history/servers")
+@login_required
+def api_history_servers():
+    return jsonify({"servers": history_db.get_servers()})
+
+@app.route("/api/history/channels/<guild_id>")
+@login_required
+def api_history_channels(guild_id):
+    return jsonify({"channels": history_db.get_channels(guild_id)})
+
+@app.route("/api/history/logs/<channel_id>")
+@login_required
+def api_history_logs(channel_id):
+    logs = history_db.get_logs(channel_id, limit=100)
+    graph = history_db.get_channel_activity_graph(channel_id)
+    return jsonify({"logs": logs, "graph": graph})
+

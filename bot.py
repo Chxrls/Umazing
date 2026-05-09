@@ -17,6 +17,7 @@ except ImportError:
 
 # Music commands
 from music import register_music_commands, set_session as music_set_session
+from db import history_db
 
 
 def _record_request(status: int) -> None:
@@ -24,9 +25,21 @@ def _record_request(status: int) -> None:
         _metrics.record_request(status)
 
 
-def _record_command(name: str) -> None:
+def _record_command(name: str, interaction: Optional[discord.Interaction] = None) -> None:
     if _metrics is not None:
         _metrics.record_command(name)
+    if interaction and interaction.guild:
+        user_name = str(interaction.user)
+        channel_name = interaction.channel.name if hasattr(interaction.channel, 'name') else str(interaction.channel.id)
+        history_db.log_interaction(
+            guild_id=str(interaction.guild.id),
+            guild_name=interaction.guild.name,
+            channel_id=str(interaction.channel.id),
+            channel_name=channel_name,
+            user_name=user_name,
+            action_type="command",
+            action_detail=name
+        )
 
 # Configuration
 load_dotenv()
@@ -57,7 +70,7 @@ bot = discord.Client(intents=intents)
 tree = app_commands.CommandTree(bot)
 
 # Register music slash commands at import time
-register_music_commands(tree)
+register_music_commands(tree, record_command=_record_command)
 
 # Reusable aiohttp session — created on_ready, closed on shutdown
 session: Optional[aiohttp.ClientSession] = None
@@ -207,7 +220,7 @@ async def cmd_character(
     name: str,
     include: Optional[app_commands.Choice[str]] = None,
 ):
-    _record_command("character")
+    _record_command("character", interaction)
     try:
         await interaction.response.defer()
     except (discord.NotFound, discord.HTTPException):
@@ -316,7 +329,7 @@ async def cmd_card(
     character: str,
     info: Optional[bool] = False,
 ):
-    _record_command("card")
+    _record_command("card", interaction)
     try:
         await interaction.response.defer()
     except (discord.NotFound, discord.HTTPException):
@@ -417,7 +430,7 @@ async def cmd_umavoice(
     interaction: discord.Interaction,
     character: str,
 ):
-    _record_command("umavoice")
+    _record_command("umavoice", interaction)
     try:
         await interaction.response.defer()
     except (discord.NotFound, discord.HTTPException):
@@ -582,6 +595,21 @@ async def on_app_command_error(
     except discord.HTTPException:
         pass  # Interaction may have expired
 
+@bot.event
+async def on_message(message: discord.Message):
+    if message.author.bot:
+        return
+    if bot.user in message.mentions and message.guild:
+        channel_name = message.channel.name if hasattr(message.channel, 'name') else str(message.channel.id)
+        history_db.log_interaction(
+            guild_id=str(message.guild.id),
+            guild_name=message.guild.name,
+            channel_id=str(message.channel.id),
+            channel_name=channel_name,
+            user_name=str(message.author),
+            action_type="mention",
+            action_detail=message.content[:50]
+        )
 
 # Entry point (standalone — without Flask dashboard)
 
