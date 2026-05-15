@@ -232,6 +232,17 @@ def health():
     return jsonify({"status": "ok", "ts": int(time.time())})
 
 
+
+@app.route("/api/uptime")
+def api_uptime():
+    """Public endpoint — returns only the bot uptime (no auth required)."""
+    snap = metrics.snapshot()
+    return jsonify({
+        "uptime": snap["uptime"],
+        "uptime_seconds": snap["uptime_seconds"],
+    })
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = None

@@ -5,9 +5,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Umazing | Login</title>
+  <meta name="description"
+    content="Umazing Bot — Your Uma Musume Discord companion. Look up characters, support cards, voice actors, and more." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet" />
   <style>
     *,
     *::before,
@@ -21,6 +24,11 @@
       --text: #f1f5f9;
       --muted: #cbd5e1;
       --error: #f87171;
+      --glass-bg: rgba(47, 54, 64, 0.50);
+      --glass-border: rgba(255, 255, 255, 0.13);
+      --glass-blur: 16px;
+      --accent: #EE6FAB;
+      --nav-height: 56px;
     }
 
     html,
@@ -28,6 +36,7 @@
       height: 100%;
       font-family: 'Inter', sans-serif;
       color: var(--text);
+      overflow: hidden;
     }
 
     body {
@@ -35,42 +44,151 @@
       background-size: cover;
     }
 
-    /* Gradient overlay for desktop */
+    /* Gradient overlay */
     body::before {
       content: '';
       position: fixed;
       top: 0;
       left: 0;
-      width: 50%;
+      width: 55%;
       height: 100%;
-      background: linear-gradient(90deg, rgba(203, 201, 201, 1) 0%, rgba(255, 249, 249, 0) 100%);
+      background: linear-gradient(90deg, rgba(203, 201, 201, 0.95) 0%, rgba(255, 249, 249, 0) 100%);
       pointer-events: none;
       z-index: 0;
     }
 
+    /* ─── NAVBAR ─── */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--nav-height);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      padding: 0 2rem;
+      background: rgba(15, 20, 30, 0.25);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-right: auto;
+      cursor: default;
+      user-select: none;
+    }
+
+    .nav-brand-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .nav-link {
+      padding: 0.5rem 1.25rem;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.7);
+      cursor: pointer;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      transition: all 0.25s ease;
+      letter-spacing: 0.01em;
+      position: relative;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .nav-link:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .nav-link.active {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .nav-link.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+    }
+
+    /* ─── MAIN CONTENT ─── */
     .page {
       position: relative;
       z-index: 1;
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: flex-start;
       padding: 2rem;
-      padding-left: 8%;
-      /* Adjust left padding for the floating box */
+      padding-left: 5%;
+      padding-top: calc(var(--nav-height) + 2rem);
     }
 
-    /* Liquid glassmorphism card */
+    /* ─── TAB PANELS ─── */
+    .tab-panel {
+      display: none;
+      width: 100%;
+      max-width: 420px;
+      animation: fadeSlideIn 0.35s ease;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─── GLASS CARD ─── */
     .card {
-      background: rgba(47, 54, 64, 0.45);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
       box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.1);
       border-radius: 16px;
+      padding: 2rem;
+    }
+
+    .card+.card {
+      margin-top: 1rem;
+    }
+
+    /* ─── LOGIN PANEL ─── */
+    .login-card {
       padding: 2.5rem;
-      width: 100%;
-      max-width: 400px;
     }
 
     .logo {
@@ -181,60 +299,359 @@
       transform: scale(0.98);
     }
 
-    /* Mobile adjustments */
+    /* ─── DESCRIPTION PANEL ─── */
+    .desc-card {
+      min-height: 320px;
+    }
+
+    .desc-card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .desc-card p {
+      font-size: 0.9rem;
+      color: var(--muted);
+      line-height: 1.7;
+      margin-bottom: 0.75rem;
+    }
+
+    /* ─── FEATURES PANEL ─── */
+    .features-card {
+      min-height: 320px;
+    }
+
+    .features-card h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+    }
+
+    .feature-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .feature-list li {
+      padding: 0.6rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      font-size: 0.88rem;
+      color: var(--muted);
+      display: flex;
+      align-items: flex-start;
+      gap: 0.6rem;
+    }
+
+    .feature-list li:last-child {
+      border-bottom: none;
+    }
+
+    .feature-list .cmd {
+      color: var(--accent);
+      font-weight: 600;
+      min-width: 110px;
+      font-family: 'Inter', monospace;
+      font-size: 0.82rem;
+    }
+
+    /* ─── INVITE PANEL ─── */
+    .invite-section h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+    }
+
+    .invite-section p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .btn-action {
+      display: inline-block;
+      padding: 0.6rem 1.8rem;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+
+    .btn-action:hover {
+      background: rgba(0, 0, 0, 0.5);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+
+    .uptime-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+    }
+
+    .uptime-card h3 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .uptime-badge {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 6px;
+      padding: 0.35rem 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.05em;
+      color: var(--text);
+    }
+
+    /* ─── MOBILE ─── */
     @media (max-width: 768px) {
       body {
         background-position: 70% center;
-        /* Shift background so characters are in center */
       }
 
       body::before {
         display: none;
-        /* Remove gradient */
+      }
+
+      .navbar {
+        padding: 0 1rem;
+      }
+
+      .nav-brand {
+        font-size: 1rem;
+      }
+
+      .nav-links {
+        gap: 0;
+      }
+
+      .nav-link {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.72rem;
       }
 
       .page {
         justify-content: center;
         padding: 1.5rem;
+        padding-top: calc(var(--nav-height) + 1rem);
+      }
+
+      .card {
+        padding: 1.5rem;
+      }
+
+      .tab-panel {
+        max-width: 100%;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .nav-link {
+        padding: 0.35rem 0.45rem;
+        font-size: 0.65rem;
       }
     }
   </style>
 </head>
 
 <body>
+  <!-- NAVBAR -->
+  <nav class="navbar" id="main-navbar">
+    <div class="nav-brand">
+      <img class="nav-brand-icon" src="/assets/satonoDiamondPfp.webp" alt="Umazing" />
+      <span>Umazing Bot</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-link" id="nav-description" onclick="switchTab('description')">Description</button>
+      <button class="nav-link" id="nav-features" onclick="switchTab('features')">Features</button>
+      <button class="nav-link" id="nav-invite" onclick="switchTab('invite')">Invite and Contribute</button>
+      <button class="nav-link active" id="nav-login" onclick="switchTab('login')">Login</button>
+    </div>
+  </nav>
+
   <div class="page">
-    <div class="card">
-      <div class="logo">
-        <div class="logo-icon">🐴</div>
-        <span class="logo-text">Umazing Bot</span>
+    <!-- DESCRIPTION TAB -->
+    <div class="tab-panel" id="panel-description">
+      <div class="card desc-card">
+        <h2>Introduction</h2>
+        <p>
+          <strong>Umazing</strong> is a feature-rich Discord bot built for Uma Musume: Pretty Derby fans.
+          It connects directly to the <em>umapyoi.net</em> API to deliver real-time character data,
+          support card lookups, voice actor information, and the latest game news — all within Discord.
+        </p>
+        <p>
+          Designed with speed and elegance in mind, Umazing uses slash commands for an intuitive experience.
+          Whether you're looking up your favourite uma-girl's profile, checking support card stats via GameTora,
+          or catching up on the latest announcements — Umazing has you covered.
+        </p>
+        <p>
+          Built with <span style="color:var(--accent);">discord.py</span>, powered by
+          <span style="color:var(--accent);">aiohttp</span>, and monitored through a
+          live glassmorphism dashboard.
+        </p>
       </div>
-      <h1>Dashboard Login</h1>
-      <p class="subtitle">Sign in to access the Dashboard</p>
+    </div>
 
-      {% if error %}
-      <div class="error-box">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <line x1="12" y1="8" x2="12" y2="12" />
-          <line x1="12" y1="16" x2="12.01" y2="16" />
-        </svg>
-        {{ error }}
+    <!-- FEATURES TAB -->
+    <div class="tab-panel" id="panel-features">
+      <div class="card features-card">
+        <h2>Features</h2>
+        <ul class="feature-list">
+          <li>
+            <span class="cmd">/character</span>
+            <span>Look up any Uma Musume character — profile, image, birthday, and more.</span>
+          </li>
+          <li>
+            <span class="cmd">/card</span>
+            <span>List support cards for a character with optional GameTora links.</span>
+          </li>
+          <li>
+            <span class="cmd">/umavoice</span>
+            <span>Find the voice actor for any character, including socials.</span>
+          </li>
+          <li>
+            <span class="cmd">/umanews</span>
+            <span>Display the 5 most recent Uma Musume news posts.</span>
+          </li>
+          <li>
+            <span class="cmd">/play</span>
+            <span>Play music in voice channels with queue management.</span>
+          </li>
+          <li>
+            <span class="cmd">/skip</span>
+            <span>Skip the currently playing track.</span>
+          </li>
+          <li>
+            <span class="cmd">/queue</span>
+            <span>View the current music queue.</span>
+          </li>
+          <li>
+            <span class="cmd">/stop</span>
+            <span>Stop playback and disconnect from voice.</span>
+          </li>
+        </ul>
       </div>
-      {% endif %}
+    </div>
 
-      <form method="POST" action="/login">
-        <label for="username">Username</label>
-        <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter Username"
-          required />
+    <!-- INVITE & CONTRIBUTE TAB -->
+    <div class="tab-panel" id="panel-invite">
+      <div class="card invite-section">
+        <h3>Add Umazing to Your Server</h3>
+        <p>Invite Umazing to your Discord Server!</p>
+        <a href="https://discord.com/oauth2/authorize?client_id=1501822858798694520" class="btn-action"
+          id="btn-invite">Invite</a>
+      </div>
+      <div class="card invite-section">
+        <h3>Contribute To Umazing</h3>
+        <p>Umazing is an open source passion project. If you'd like to support development, contributions are freely
+          welcome!</p>
+        <a href="https://github.com/Chxrls/Umazing" target="_blank" rel="noopener" class="btn-action"
+          id="btn-github">Github</a>
+      </div>
+      <div class="card uptime-card">
+        <h3>Bot Uptime</h3>
+        <span class="uptime-badge" id="uptime-display">00:00:00</span>
+      </div>
+    </div>
 
-        <label for="password">Password</label>
-        <input id="password" name="password" type="password" autocomplete="current-password"
-          placeholder="Enter Password" required />
+    <!-- LOGIN TAB (default) -->
+    <div class="tab-panel active" id="panel-login">
+      <div class="card login-card">
+        <div class="logo">
+          <div class="logo-icon"><img src="/assets/satonoDiamondPfp.webp" alt="Umazing"
+              style="width:100%;height:100%;object-fit:cover;border-radius:10px;" /></div>
+          <span class="logo-text">Umazing Bot</span>
+        </div>
+        <h1>Dashboard Login</h1>
+        <p class="subtitle">Sign in to access the Dashboard</p>
 
-        <button type="submit" id="login-btn">Sign In</button>
-      </form>
+        {% if error %}
+        <div class="error-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+          {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/login">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter Username"
+            required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password"
+            placeholder="Enter Password" required />
+
+          <button type="submit" id="login-btn">Sign In</button>
+        </form>
+      </div>
     </div>
   </div>
+
+  <script>
+    // Tab switching logic
+    function switchTab(tab) {
+      // Hide all panels
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      // Deactivate all nav links
+      document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+
+      // Show selected panel
+      const panel = document.getElementById('panel-' + tab);
+      if (panel) panel.classList.add('active');
+
+      // Activate selected nav link
+      const link = document.getElementById('nav-' + tab);
+      if (link) link.classList.add('active');
+
+      // Update page title
+      const titles = {
+        description: 'Umazing | Description',
+        features: 'Umazing | Features',
+        invite: 'Umazing | Invite & Contribute',
+        login: 'Umazing | Login'
+      };
+      document.title = titles[tab] || 'Umazing';
+    }
+
+    // Uptime counter — uses the same format as the dashboard (01h 28m 12s)
+    let uptimeSeconds = 0;
+    function updateUptime() {
+      const h = String(Math.floor(uptimeSeconds / 3600)).padStart(2, '0');
+      const m = String(Math.floor((uptimeSeconds % 3600) / 60)).padStart(2, '0');
+      const s = String(uptimeSeconds % 60).padStart(2, '0');
+      const el = document.getElementById('uptime-display');
+      if (el) el.textContent = h + 'h ' + m + 'm ' + s + 's';
+      uptimeSeconds++;
+    }
+
+    // Fetch real bot uptime from the public /api/uptime endpoint
+    fetch('/api/uptime', { redirect: 'manual' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && data.uptime_seconds) {
+          uptimeSeconds = data.uptime_seconds;
+        }
+      })
+      .catch(() => { })
+      .finally(() => {
+        updateUptime();
+        setInterval(updateUptime, 1000);
+      });
+  </script>
 </body>
 
 </html>
