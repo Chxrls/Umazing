@@ -1,6 +1,8 @@
 from __future__ import annotations
 import os
+from bs4 import BeautifulSoup
 import logging
+from datetime import datetime, timezone
 from difflib import SequenceMatcher
 from typing import Optional
 
@@ -8,6 +10,7 @@ import aiohttp
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
+from matplotlib import text
 
 # Metrics — imported lazily to avoid circular import when web.py is not present
 try:
@@ -201,6 +204,9 @@ async def fetch_va_socials(va_id: int) -> tuple[int, list | None]:
     """GET /va/socials/<va_id> — social media links for a VA."""
     return await api_get(f"/va/socials/{va_id}")
 
+async def fetch_latest_news(count: int = 5) -> tuple[int, list | None]:
+    """GET /news/latest/<count> — latest n news post IDs."""
+    return await api_get(f"/news/latest/{count}")
 
 # For slash commands sections
 
@@ -533,6 +539,89 @@ async def cmd_umavoice(
 
     await interaction.followup.send(embed=embed)
 
+
+# UMANEWS
+
+@tree.command(name="umanews", description="Show the 5 most recent news posts.")
+async def cmd_umanews(
+    interaction: discord.Interaction
+):
+    _record_command("umaneews", interaction)
+    try:
+        await interaction.response.defer()
+    except (discord.NotFound, discord.HTTPException):
+        return
+    
+    # Fetch 5 latest news post IDs
+    status, posts = await fetch_latest_news(5)
+    
+    # Checks if the API call was successful and if there are any posts to display
+    log.info("News response — status: %d, count: %s", status, len(posts) if posts else 0)
+
+    if status != 200 or not posts:
+        await interaction.followup.send(embed=error_embed(status, "Could not fetch news."))
+        return
+    
+    def strip_html(text: str) -> str:
+        soup = BeautifulSoup(text, "html.parser")
+        for br in soup.find_all("br"):
+            br.replace_with("\n")
+        return soup.get_text().strip()
+    
+    embeds: list[discord.Embed] = []
+
+    for post in posts:
+        title = post.get("title_english") or post.get("title", "Umamusume News")
+        
+        embed = discord.Embed(
+            title=title,
+            color=EMBED_COLOR,
+        )
+
+        # Body - strip HTML
+        body = post.get("message_english") or post.get("message", "")
+        body = strip_html(body)
+        if len(body) > 300:
+            body = body[:297] + "…"
+        if body:
+            embed.description = body
+
+        # Category label
+        label = post.get("label_name_en")
+        if label:
+            embed.add_field(name="Category", value=label, inline=True)
+
+        # Date from Unix timestamp
+        post_at = post.get("post_at")
+        if post_at:
+            dt = datetime.fromtimestamp(post_at, tz=timezone.utc)
+            embed.add_field(name="Date", value=dt.strftime("%B %d, %Y"), inline=True)
+
+        # Source link using announce_id
+        announce_id = post.get("announce_id")
+        if announce_id:
+            source_url = f"{API_BASE}/news/{announce_id}/source"
+            embed.add_field(name="Source", value=f"[View on umamusume.jp]({source_url})", inline=False)
+
+        # Thumbnail if available
+        img = post.get("article_image") or post.get("image")
+        if img:
+            embed.set_image(url=img)
+
+        embed.set_footer(text=f"Announce ID: {announce_id} | Data from umapyoi.net")
+        embeds.append(embed)
+    
+    if not embeds:
+        await interaction.followup.send(
+            embed=discord.Embed(
+                title="No News Found",
+                description="Could not retrieve any news posts at this time.",
+                color=EMBED_ERROR_COLOR
+            )
+        )
+        return
+    
+    await interaction.followup.send(embeds=embeds)
 
 # Bot events
 
