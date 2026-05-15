@@ -1,1492 +1,1492 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Umazing | Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    *,
-    *::before,
-    *::after {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0
-    }
-
-    :root {
-      --bg: #0f172a;
-      --surface: rgba(15, 23, 42, 0.72);
-      --card: rgba(20, 30, 55, 0.45);
-      --border: rgba(255, 255, 255, 0.13);
-      --primary: #38bdf8;
-      --primary-dim: rgba(56, 189, 248, 0.12);
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --error: #f87171;
-      --sidebar-w: 240px;
-      --glass-blur: blur(14px);
-    }
-
-    html,
-    body {
-      height: 100%;
-      font-family: 'Inter', sans-serif;
-      background: url('/assets/satonoBackground2.jpg') no-repeat center center fixed;
-      background-size: cover;
-      color: var(--text);
-      overflow: hidden
-    }
-
-    /* Dark overlay so text stays readable */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: rgba(8, 14, 30, 0.52);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-
-
-    /* Layout */
-    .app {
-      display: flex;
-      height: 100vh;
-      position: relative;
-      z-index: 1;
-    }
-
-    /* Sidebar — thick opaque glass */
-    .sidebar {
-      width: var(--sidebar-w);
-      flex-shrink: 0;
-      background: rgba(10, 16, 36, 0.82);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border-right: 1px solid rgba(255, 255, 255, 0.10);
-      box-shadow: 2px 0 24px rgba(0,0,0,0.35);
-      display: flex;
-      flex-direction: column;
-      padding: 1.5rem 1rem;
-      gap: 0.5rem;
-    }
-
-    .mobile-header {
-      display: none;
-    }
-    .sidebar-overlay {
-      display: none;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: .6rem;
-      padding: .5rem .75rem;
-      margin-bottom: .75rem
-    }
-
-    .logo-icon {
-      width: 32px;
-      height: 32px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1.1rem
-    }
-
-    .logo-text {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--text);
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-      padding: .65rem .75rem;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: .875rem;
-      font-weight: 500;
-      color: var(--muted);
-      transition: background .2s, color .2s;
-      border: none;
-      background: none;
-      width: 100%;
-      text-align: left;
-    }
-
-    .nav-item:hover {
-      background: rgba(255, 255, 255, 0.04);
-      color: var(--text)
-    }
-
-    .nav-item.active {
-      background: var(--primary-dim);
-      color: var(--primary)
-    }
-
-    .nav-item svg {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0
-    }
-
-    .sidebar-footer {
-      margin-top: auto
-    }
-
-    .logout-btn {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: .65rem;
-      padding: .65rem .75rem;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: .875rem;
-      font-weight: 500;
-      color: var(--muted);
-      border: none;
-      background: none;
-      transition: background .2s, color .2s;
-      text-decoration: none;
-    }
-
-    .logout-btn:hover {
-      background: rgba(248, 113, 113, 0.08);
-      color: var(--error)
-    }
-
-    /* Main */
-    .main {
-      flex: 1;
-      overflow-y: auto;
-      padding: 2rem
-    }
-
-    .page-header {
-      margin-bottom: 1.75rem
-    }
-
-    .page-title {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: .25rem
-    }
-
-    .page-sub {
-      font-size: .875rem;
-      color: var(--muted)
-    }
-
-    /* Tab panels */
-    .tab-panel {
-      display: none
-    }
-
-    .tab-panel.active {
-      display: block
-    }
-
-    /* Stat cards */
-    .stat-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
-      margin-bottom: 1.5rem
-    }
-
-    .stat-card {
-      background: var(--card);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 1.25rem;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .stat-label {
-      font-size: .75rem;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      margin-bottom: .5rem
-    }
-
-    .stat-value {
-      font-size: 2rem;
-      font-weight: 700;
-      line-height: 1;
-      color: var(--text);
-    }
-
-    .stat-icon {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      opacity: .15;
-      font-size: 1.75rem
-    }
-
-    /* Charts row */
-    .chart-grid {
-      display: grid;
-      grid-template-columns: 2fr 1fr;
-      gap: 1rem;
-      margin-bottom: 1.5rem
-    }
-
-    .chart-card {
-      background: var(--card);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 1.25rem
-    }
-
-    .chart-title {
-      font-size: .875rem;
-      font-weight: 600;
-      margin-bottom: 1rem;
-      color: var(--text)
-    }
-
-    .chart-wrap {
-      position: relative;
-      height: 200px
-    }
-
-    /* Error table */
-    .table-card {
-      background: var(--card);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 1.25rem;
-      margin-bottom: 1.5rem
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: .85rem
-    }
-
-    th {
-      text-align: left;
-      padding: .5rem .75rem;
-      color: var(--muted);
-      font-weight: 500;
-      font-size: .75rem;
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      border-bottom: 1px solid var(--border)
-    }
-
-    td {
-      padding: .6rem .75rem;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.03)
-    }
-
-    tr:last-child td {
-      border-bottom: none
-    }
-
-    .badge {
-      display: inline-block;
-      padding: .15rem .5rem;
-      border-radius: 5px;
-      font-size: .75rem;
-      font-weight: 600
-    }
-
-    .badge-error {
-      background: rgba(248, 113, 113, 0.12);
-      color: var(--error)
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 2rem;
-      color: var(--muted);
-      font-size: .875rem
-    }
-
-    /* Reset btn */
-    .reset-btn {
-      padding: .55rem 1.1rem;
-      background: rgba(248, 113, 113, 0.1);
-      border: 1px solid rgba(248, 113, 113, 0.2);
-      border-radius: 8px;
-      color: var(--error);
-      font-size: .8rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background .2s;
-      margin-top: 1rem;
-    }
-
-    .reset-btn:hover {
-      background: rgba(248, 113, 113, 0.2)
-    }
-
-    /* Interactions tab */
-    .interactions-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.25rem
-    }
-
-    .form-card {
-      background: var(--card);
-      backdrop-filter: var(--glass-blur);
-      -webkit-backdrop-filter: var(--glass-blur);
-      border: 1px solid var(--border);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 1.5rem
-    }
-
-    .form-title {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 1.25rem
-    }
-
-    label.field-label {
-      display: block;
-      font-size: .78rem;
-      font-weight: 500;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .05em;
-      margin-bottom: .4rem
-    }
-
-    select,
-    textarea {
-      width: 100%;
-      padding: .7rem .85rem;
-      background: rgba(0, 0, 0, 0.2);
-      border: 1px solid rgba(255,255,255,0.12);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: 'Inter', sans-serif;
-      font-size: .9rem;
-      outline: none;
-      transition: border-color .2s, box-shadow .2s;
-      margin-bottom: 1rem;
-    }
-
-    select:focus,
-    textarea:focus {
-      border-color: var(--primary);
-    }
-
-    select option {
-      background: var(--surface)
-    }
-
-    textarea {
-      resize: vertical;
-      min-height: 130px;
-      line-height: 1.5
-    }
-
-    .char-count {
-      font-size: .75rem;
-      color: var(--muted);
-      text-align: right;
-      margin-top: -.75rem;
-      margin-bottom: 1rem
-    }
-
-    .char-count.warn {
-      color: var(--error)
-    }
-
-    .send-btn {
-      width: 100%;
-      padding: .8rem;
-      background: var(--primary);
-      border: none;
-      border-radius: 6px;
-      color: #0f172a;
-      font-family: 'Inter', sans-serif;
-      font-size: .9rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: .5rem;
-    }
-
-    .send-btn:hover {
-      opacity: .9
-    }
-
-    .send-btn:active {
-      transform: scale(.98)
-    }
-
-    .send-btn:disabled {
-      opacity: .4;
-      cursor: not-allowed
-    }
-
-    .feedback {
-      font-size: .82rem;
-      margin-top: .75rem;
-      padding: .6rem .85rem;
-      border-radius: 8px;
-      display: none
-    }
-
-    .feedback.ok {
-      background: rgba(52, 211, 153, 0.1);
-      border: 1px solid rgba(52, 211, 153, 0.25);
-      color: var(--green)
-    }
-
-    .feedback.err {
-      background: rgba(248, 113, 113, 0.1);
-      border: 1px solid rgba(248, 113, 113, 0.25);
-      color: var(--error)
-    }
-
-    /* Announcement history */
-    .ann-item {
-      padding: .75rem;
-      border-radius: 8px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid var(--border);
-      margin-bottom: .6rem
-    }
-
-    .ann-channel {
-      font-size: .75rem;
-      font-weight: 600;
-      color: var(--primary);
-      margin-bottom: .25rem
-    }
-
-    .ann-content {
-      font-size: .85rem;
-      color: var(--text);
-      line-height: 1.4
-    }
-
-    .ann-ts {
-      font-size: .72rem;
-      color: var(--muted);
-      margin-top: .25rem
-    }
-
-    /* Spinner */
-    @keyframes spin {
-      to {
-        transform: rotate(360deg)
+  <!DOCTYPE html>
+  <html lang="en">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Umazing | Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0
       }
-    }
 
-    .spinner {
-      width: 16px;
-      height: 16px;
-      border: 2px solid rgba(255, 255, 255, .3);
-      border-top-color: #fff;
-      border-radius: 50%;
-      animation: spin .6s linear infinite
-    }
+      :root {
+        --bg: #0f172a;
+        --surface: rgba(15, 23, 42, 0.72);
+        --card: rgba(20, 30, 55, 0.45);
+        --border: rgba(255, 255, 255, 0.13);
+        --primary: #38bdf8;
+        --primary-dim: rgba(56, 189, 248, 0.12);
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --error: #f87171;
+        --sidebar-w: 240px;
+        --glass-blur: blur(14px);
+      }
 
-    /* Console Tab */
-    .console-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 1rem
-    }
+      html,
+      body {
+        height: 100%;
+        font-family: 'Inter', sans-serif;
+        background: url('/assets/satonoBackground2.jpg') no-repeat center center fixed;
+        background-size: cover;
+        color: var(--text);
+        overflow: hidden
+      }
 
-    .console-actions {
-      display: flex;
-      gap: .5rem
-    }
+      /* Dark overlay so text stays readable */
+      body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        background: rgba(8, 14, 30, 0.52);
+        pointer-events: none;
+        z-index: 0;
+      }
 
-    .console-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      color: var(--text);
-      font-size: .8rem;
-      padding: .4rem .8rem;
-      cursor: pointer;
-      transition: background .2s, border-color .2s;
-      display: flex;
-      align-items: center;
-      gap: .4rem;
-    }
 
-    .console-btn:hover {
-      background: rgba(255, 255, 255, 0.1)
-    }
 
-    .console-btn.active {
-      background: var(--primary-dim);
-      color: var(--primary);
-      border-color: var(--primary)
-    }
-
-    .console-window {
-      background: rgba(0, 0, 0, 0.55);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      border: 1px solid rgba(255,255,255,0.10);
-      border-radius: 12px;
-      padding: 1rem;
-      height: calc(100vh - 180px);
-      overflow-y: auto;
-      font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
-      font-size: .85rem;
-      line-height: 1.6;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 4px 20px rgba(0,0,0,0.3);
-    }
-
-    .log-entry {
-      display: flex;
-      gap: .75rem;
-      padding: .15rem 0;
-      word-break: break-word;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.02)
-    }
-
-    .log-ts {
-      color: var(--muted);
-      flex-shrink: 0
-    }
-
-    .log-level {
-      font-weight: 700;
-      flex-shrink: 0;
-      width: 60px
-    }
-
-    .log-INFO {
-      color: #60a5fa
-    }
-
-    .log-WARNING {
-      color: #fbbf24
-    }
-
-    .log-ERROR {
-      color: #f87171
-    }
-
-    .log-DEBUG {
-      color: #94a3b8
-    }
-
-    .log-name {
-      color: var(--primary);
-      opacity: 0.8;
-      flex-shrink: 0
-    }
-
-    .log-msg {
-      color: #f1f5f9;
-      white-space: pre-wrap
-    }
-
-    @media (max-width: 768px) {
+      /* Layout */
       .app {
-        flex-direction: column;
-      }
-      .mobile-header {
         display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 1rem 1.5rem;
+        height: 100vh;
+        position: relative;
+        z-index: 1;
+      }
+
+      /* Sidebar — thick opaque glass */
+      .sidebar {
+        width: var(--sidebar-w);
+        flex-shrink: 0;
         background: rgba(10, 16, 36, 0.82);
         backdrop-filter: var(--glass-blur);
         -webkit-backdrop-filter: var(--glass-blur);
-        border-bottom: 1px solid rgba(255,255,255,0.10);
-        flex-shrink: 0;
-        z-index: 20;
-      }
-      .mobile-header .logo {
-        margin: 0;
-        padding: 0;
-      }
-      .hamburger-btn {
-        background: none;
-        border: none;
-        color: var(--text);
-        cursor: pointer;
-      }
-      .sidebar {
-        position: fixed;
-        top: 0; bottom: 0; left: 0;
-        z-index: 50;
-        transform: translateX(-100%);
-        transition: transform 0.3s ease;
-      }
-      .sidebar.open {
-        transform: translateX(0);
-      }
-      .sidebar-overlay.show {
-        display: block;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 40;
-      }
-      .main {
-        padding: 1rem;
-      }
-      .stat-grid {
+        border-right: 1px solid rgba(255, 255, 255, 0.10);
+        box-shadow: 2px 0 24px rgba(0,0,0,0.35);
         display: flex;
         flex-direction: column;
-        gap: 0;
+        padding: 1.5rem 1rem;
+        gap: 0.5rem;
+      }
+
+      .mobile-header {
+        display: none;
+      }
+      .sidebar-overlay {
+        display: none;
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: .6rem;
+        padding: .5rem .75rem;
+        margin-bottom: .75rem
+      }
+
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.1rem
+      }
+
+      .logo-text {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .nav-item {
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        padding: .65rem .75rem;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: .875rem;
+        font-weight: 500;
+        color: var(--muted);
+        transition: background .2s, color .2s;
+        border: none;
+        background: none;
+        width: 100%;
+        text-align: left;
+      }
+
+      .nav-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text)
+      }
+
+      .nav-item.active {
+        background: var(--primary-dim);
+        color: var(--primary)
+      }
+
+      .nav-item svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0
+      }
+
+      .sidebar-footer {
+        margin-top: auto
+      }
+
+      .logout-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        gap: .65rem;
+        padding: .65rem .75rem;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: .875rem;
+        font-weight: 500;
+        color: var(--muted);
+        border: none;
+        background: none;
+        transition: background .2s, color .2s;
+        text-decoration: none;
+      }
+
+      .logout-btn:hover {
+        background: rgba(248, 113, 113, 0.08);
+        color: var(--error)
+      }
+
+      /* Main */
+      .main {
+        flex: 1;
+        overflow-y: auto;
+        padding: 2rem
+      }
+
+      .page-header {
+        margin-bottom: 1.75rem
+      }
+
+      .page-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: .25rem
+      }
+
+      .page-sub {
+        font-size: .875rem;
+        color: var(--muted)
+      }
+
+      /* Tab panels */
+      .tab-panel {
+        display: none
+      }
+
+      .tab-panel.active {
+        display: block
+      }
+
+      /* Stat cards */
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem
+      }
+
+      .stat-card {
         background: var(--card);
         backdrop-filter: var(--glass-blur);
         -webkit-backdrop-filter: var(--glass-blur);
         border: 1px solid var(--border);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
         border-radius: 12px;
+        padding: 1.25rem;
+        position: relative;
         overflow: hidden;
       }
-      .stat-card {
-        border: none;
-        border-radius: 0;
-        border-bottom: 1px solid var(--border);
-        background: transparent;
-        backdrop-filter: none;
-        box-shadow: none;
+
+      .stat-label {
+        font-size: .75rem;
+        font-weight: 500;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: .5rem
       }
-      .stat-card:last-child {
-        border-bottom: none;
+
+      .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1;
+        color: var(--text);
       }
+
+      .stat-icon {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        opacity: .15;
+        font-size: 1.75rem
+      }
+
+      /* Charts row */
       .chart-grid {
-        grid-template-columns: 1fr;
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+        margin-bottom: 1.5rem
       }
+
+      .chart-card {
+        background: var(--card);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1.25rem
+      }
+
+      .chart-title {
+        font-size: .875rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        color: var(--text)
+      }
+
       .chart-wrap {
-        overflow-x: auto;
+        position: relative;
+        height: 200px
       }
-      .chart-wrap canvas {
-        min-width: 600px;
-      }
+
+      /* Error table */
       .table-card {
-        overflow-x: auto;
-        padding: 1rem;
+        background: var(--card);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin-bottom: 1.5rem
       }
+
       table {
-        min-width: 500px;
+        width: 100%;
+        border-collapse: collapse;
+        font-size: .85rem
       }
-      .flex-responsive {
-        flex-direction: column !important;
+
+      th {
+        text-align: left;
+        padding: .5rem .75rem;
+        color: var(--muted);
+        font-weight: 500;
+        font-size: .75rem;
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        border-bottom: 1px solid var(--border)
       }
-    }
 
-    /* Modal styles */
-    .modal-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.6);
-      backdrop-filter: blur(4px);
-      z-index: 100;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      opacity: 0;
-      transition: opacity 0.2s ease;
-    }
-    .modal-overlay.active {
-      display: flex;
-      opacity: 1;
-    }
-    .modal-card {
-      background: rgba(20, 30, 55, 0.55);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 16px;
-      padding: 2rem 1.5rem 1.5rem;
-      width: 90%;
-      max-width: 360px;
-      text-align: center;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
-      transform: scale(0.95);
-      transition: transform 0.2s ease;
-    }
-    .modal-overlay.active .modal-card {
-      transform: scale(1);
-    }
-    .modal-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      background: rgba(248, 113, 113, 0.15);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 auto 1.25rem;
-    }
-    .modal-icon svg {
-      width: 24px;
-      height: 24px;
-    }
-    .modal-title {
-      color: var(--text);
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin-bottom: 0.5rem;
-    }
-    .modal-subtitle {
-      color: var(--muted);
-      font-size: 0.875rem;
-      line-height: 1.4;
-      margin-bottom: 1.5rem;
-    }
-    .modal-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-    .btn-danger {
-      display: block;
-      width: 100%;
-      background: var(--error);
-      color: #0f172a;
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-weight: 600;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-      transition: filter 0.2s;
-    }
-    .btn-danger:hover {
-      filter: brightness(1.1);
-    }
-    .btn-cancel {
-      display: block;
-      width: 100%;
-      background: transparent;
-      color: var(--text);
-      padding: 0.75rem;
-      border-radius: 8px;
-      font-weight: 600;
-      text-decoration: none;
-      border: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-cancel:hover {
-      background: rgba(255, 255, 255, 0.05);
-    }
-  </style>
-</head>
+      td {
+        padding: .6rem .75rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03)
+      }
 
-<body>
-  <div class="app">
-    
-    <!-- Mobile header -->
-    <div class="mobile-header">
-      <div class="logo">
-        <div class="logo-icon">🐴</div>
-        <span class="logo-text">Umazing</span>
-      </div>
-      <button class="hamburger-btn" onclick="toggleSidebar()">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
-      </button>
-    </div>
-    
-    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
+      tr:last-child td {
+        border-bottom: none
+      }
 
-    <!-- Sidebar -->
-    <aside class="sidebar" id="sidebar">
+      .badge {
+        display: inline-block;
+        padding: .15rem .5rem;
+        border-radius: 5px;
+        font-size: .75rem;
+        font-weight: 600
+      }
 
-      <button class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="3" y="3" width="7" height="7" />
-          <rect x="14" y="3" width="7" height="7" />
-          <rect x="14" y="14" width="7" height="7" />
-          <rect x="3" y="14" width="7" height="7" />
-        </svg>
-        Overview
-      </button>
-      <button class="nav-item" id="nav-interactions" onclick="switchTab('interactions')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-        </svg>
-        Interactions
-      </button>
-      <button class="nav-item" id="nav-console" onclick="switchTab('console')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="4 17 10 11 4 5" />
-          <line x1="12" y1="19" x2="20" y2="19" />
-        </svg>
-        Console
-      </button>
-      <button class="nav-item" id="nav-history" onclick="switchTab('history')">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-        Use History
-      </button>
+      .badge-error {
+        background: rgba(248, 113, 113, 0.12);
+        color: var(--error)
+      }
 
-      <div class="sidebar-footer">
-        <a href="#" class="logout-btn" onclick="openLogoutModal(event)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
+      .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--muted);
+        font-size: .875rem
+      }
+
+      /* Reset btn */
+      .reset-btn {
+        padding: .55rem 1.1rem;
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.2);
+        border-radius: 8px;
+        color: var(--error);
+        font-size: .8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background .2s;
+        margin-top: 1rem;
+      }
+
+      .reset-btn:hover {
+        background: rgba(248, 113, 113, 0.2)
+      }
+
+      /* Interactions tab */
+      .interactions-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.25rem
+      }
+
+      .form-card {
+        background: var(--card);
+        backdrop-filter: var(--glass-blur);
+        -webkit-backdrop-filter: var(--glass-blur);
+        border: 1px solid var(--border);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.08);
+        border-radius: 12px;
+        padding: 1.5rem
+      }
+
+      .form-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 1.25rem
+      }
+
+      label.field-label {
+        display: block;
+        font-size: .78rem;
+        font-weight: 500;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: .05em;
+        margin-bottom: .4rem
+      }
+
+      select,
+      textarea {
+        width: 100%;
+        padding: .7rem .85rem;
+        background: rgba(0, 0, 0, 0.2);
+        border: 1px solid rgba(255,255,255,0.12);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'Inter', sans-serif;
+        font-size: .9rem;
+        outline: none;
+        transition: border-color .2s, box-shadow .2s;
+        margin-bottom: 1rem;
+      }
+
+      select:focus,
+      textarea:focus {
+        border-color: var(--primary);
+      }
+
+      select option {
+        background: var(--surface)
+      }
+
+      textarea {
+        resize: vertical;
+        min-height: 130px;
+        line-height: 1.5
+      }
+
+      .char-count {
+        font-size: .75rem;
+        color: var(--muted);
+        text-align: right;
+        margin-top: -.75rem;
+        margin-bottom: 1rem
+      }
+
+      .char-count.warn {
+        color: var(--error)
+      }
+
+      .send-btn {
+        width: 100%;
+        padding: .8rem;
+        background: var(--primary);
+        border: none;
+        border-radius: 6px;
+        color: #0f172a;
+        font-family: 'Inter', sans-serif;
+        font-size: .9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background .2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: .5rem;
+      }
+
+      .send-btn:hover {
+        opacity: .9
+      }
+
+      .send-btn:active {
+        transform: scale(.98)
+      }
+
+      .send-btn:disabled {
+        opacity: .4;
+        cursor: not-allowed
+      }
+
+      .feedback {
+        font-size: .82rem;
+        margin-top: .75rem;
+        padding: .6rem .85rem;
+        border-radius: 8px;
+        display: none
+      }
+
+      .feedback.ok {
+        background: rgba(52, 211, 153, 0.1);
+        border: 1px solid rgba(52, 211, 153, 0.25);
+        color: var(--green)
+      }
+
+      .feedback.err {
+        background: rgba(248, 113, 113, 0.1);
+        border: 1px solid rgba(248, 113, 113, 0.25);
+        color: var(--error)
+      }
+
+      /* Announcement history */
+      .ann-item {
+        padding: .75rem;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border);
+        margin-bottom: .6rem
+      }
+
+      .ann-channel {
+        font-size: .75rem;
+        font-weight: 600;
+        color: var(--primary);
+        margin-bottom: .25rem
+      }
+
+      .ann-content {
+        font-size: .85rem;
+        color: var(--text);
+        line-height: 1.4
+      }
+
+      .ann-ts {
+        font-size: .72rem;
+        color: var(--muted);
+        margin-top: .25rem
+      }
+
+      /* Spinner */
+      @keyframes spin {
+        to {
+          transform: rotate(360deg)
+        }
+      }
+
+      .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid rgba(255, 255, 255, .3);
+        border-top-color: #fff;
+        border-radius: 50%;
+        animation: spin .6s linear infinite
+      }
+
+      /* Console Tab */
+      .console-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem
+      }
+
+      .console-actions {
+        display: flex;
+        gap: .5rem
+      }
+
+      .console-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: .8rem;
+        padding: .4rem .8rem;
+        cursor: pointer;
+        transition: background .2s, border-color .2s;
+        display: flex;
+        align-items: center;
+        gap: .4rem;
+      }
+
+      .console-btn:hover {
+        background: rgba(255, 255, 255, 0.1)
+      }
+
+      .console-btn.active {
+        background: var(--primary-dim);
+        color: var(--primary);
+        border-color: var(--primary)
+      }
+
+      .console-window {
+        background: rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.10);
+        border-radius: 12px;
+        padding: 1rem;
+        height: calc(100vh - 180px);
+        overflow-y: auto;
+        font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+        font-size: .85rem;
+        line-height: 1.6;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4), inset 0 4px 20px rgba(0,0,0,0.3);
+      }
+
+      .log-entry {
+        display: flex;
+        gap: .75rem;
+        padding: .15rem 0;
+        word-break: break-word;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.02)
+      }
+
+      .log-ts {
+        color: var(--muted);
+        flex-shrink: 0
+      }
+
+      .log-level {
+        font-weight: 700;
+        flex-shrink: 0;
+        width: 60px
+      }
+
+      .log-INFO {
+        color: #60a5fa
+      }
+
+      .log-WARNING {
+        color: #fbbf24
+      }
+
+      .log-ERROR {
+        color: #f87171
+      }
+
+      .log-DEBUG {
+        color: #94a3b8
+      }
+
+      .log-name {
+        color: var(--primary);
+        opacity: 0.8;
+        flex-shrink: 0
+      }
+
+      .log-msg {
+        color: #f1f5f9;
+        white-space: pre-wrap
+      }
+
+      @media (max-width: 768px) {
+        .app {
+          flex-direction: column;
+        }
+        .mobile-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 1rem 1.5rem;
+          background: rgba(10, 16, 36, 0.82);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border-bottom: 1px solid rgba(255,255,255,0.10);
+          flex-shrink: 0;
+          z-index: 20;
+        }
+        .mobile-header .logo {
+          margin: 0;
+          padding: 0;
+        }
+        .hamburger-btn {
+          background: none;
+          border: none;
+          color: var(--text);
+          cursor: pointer;
+        }
+        .sidebar {
+          position: fixed;
+          top: 0; bottom: 0; left: 0;
+          z-index: 50;
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+        }
+        .sidebar.open {
+          transform: translateX(0);
+        }
+        .sidebar-overlay.show {
+          display: block;
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 40;
+        }
+        .main {
+          padding: 1rem;
+        }
+        .stat-grid {
+          display: flex;
+          flex-direction: column;
+          gap: 0;
+          background: var(--card);
+          backdrop-filter: var(--glass-blur);
+          -webkit-backdrop-filter: var(--glass-blur);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          overflow: hidden;
+        }
+        .stat-card {
+          border: none;
+          border-radius: 0;
+          border-bottom: 1px solid var(--border);
+          background: transparent;
+          backdrop-filter: none;
+          box-shadow: none;
+        }
+        .stat-card:last-child {
+          border-bottom: none;
+        }
+        .chart-grid {
+          grid-template-columns: 1fr;
+        }
+        .chart-wrap {
+          overflow-x: auto;
+        }
+        .chart-wrap canvas {
+          min-width: 600px;
+        }
+        .table-card {
+          overflow-x: auto;
+          padding: 1rem;
+        }
+        table {
+          min-width: 500px;
+        }
+        .flex-responsive {
+          flex-direction: column !important;
+        }
+      }
+
+      /* Modal styles */
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(4px);
+        z-index: 100;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity 0.2s ease;
+      }
+      .modal-overlay.active {
+        display: flex;
+        opacity: 1;
+      }
+      .modal-card {
+        background: rgba(20, 30, 55, 0.55);
+        backdrop-filter: blur(18px);
+        -webkit-backdrop-filter: blur(18px);
+        border: 1px solid rgba(255,255,255,0.15);
+        border-radius: 16px;
+        padding: 2rem 1.5rem 1.5rem;
+        width: 90%;
+        max-width: 360px;
+        text-align: center;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.1);
+        transform: scale(0.95);
+        transition: transform 0.2s ease;
+      }
+      .modal-overlay.active .modal-card {
+        transform: scale(1);
+      }
+      .modal-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: rgba(248, 113, 113, 0.15);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1.25rem;
+      }
+      .modal-icon svg {
+        width: 24px;
+        height: 24px;
+      }
+      .modal-title {
+        color: var(--text);
+        font-size: 1.25rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+      }
+      .modal-subtitle {
+        color: var(--muted);
+        font-size: 0.875rem;
+        line-height: 1.4;
+        margin-bottom: 1.5rem;
+      }
+      .modal-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .btn-danger {
+        display: block;
+        width: 100%;
+        background: var(--error);
+        color: #0f172a;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        border: none;
+        cursor: pointer;
+        transition: filter 0.2s;
+      }
+      .btn-danger:hover {
+        filter: brightness(1.1);
+      }
+      .btn-cancel {
+        display: block;
+        width: 100%;
+        background: transparent;
+        color: var(--text);
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        border: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.05);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="app">
+      
+      <!-- Mobile header -->
+      <div class="mobile-header">
+        <div class="logo">
+          <div class="logo-icon">🐴</div>
+          <span class="logo-text">Umazing</span>
+        </div>
+        <button class="hamburger-btn" onclick="toggleSidebar()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
           </svg>
-          Logout
-        </a>
+        </button>
       </div>
-    </aside>
+      
+      <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- Main Content -->
-    <main class="main">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
 
-      <!-- ===== OVERVIEW TAB ===== -->
-      <div class="tab-panel active" id="tab-overview">
-        <div class="page-header">
-          <h1 class="page-title">Overview</h1>
-          <p class="page-sub">Live metrics — refreshes every 10 seconds</p>
+        <button class="nav-item active" id="nav-overview" onclick="switchTab('overview')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="7" height="7" />
+            <rect x="14" y="3" width="7" height="7" />
+            <rect x="14" y="14" width="7" height="7" />
+            <rect x="3" y="14" width="7" height="7" />
+          </svg>
+          Overview
+        </button>
+        <button class="nav-item" id="nav-interactions" onclick="switchTab('interactions')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          Interactions
+        </button>
+        <button class="nav-item" id="nav-console" onclick="switchTab('console')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="4 17 10 11 4 5" />
+            <line x1="12" y1="19" x2="20" y2="19" />
+          </svg>
+          Console
+        </button>
+        <button class="nav-item" id="nav-history" onclick="switchTab('history')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          Use History
+        </button>
+
+        <div class="sidebar-footer">
+          <a href="#" class="logout-btn" onclick="openLogoutModal(event)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+            Logout
+          </a>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main">
+
+        <!-- ===== OVERVIEW TAB ===== -->
+        <div class="tab-panel active" id="tab-overview">
+          <div class="page-header">
+            <h1 class="page-title">Overview</h1>
+            <p class="page-sub">Live metrics — refreshes every 10 seconds</p>
+          </div>
+
+          <!-- Stat Cards -->
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">API Requests</div>
+              <div class="stat-value" id="stat-requests">—</div>
+              <div class="stat-icon">📡</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Commands Used</div>
+              <div class="stat-value" id="stat-commands">—</div>
+              <div class="stat-icon">⚡</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">API Errors</div>
+              <div class="stat-value" id="stat-errors" style="color:var(--error)">—</div>
+              <div class="stat-icon">⚠️</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Uptime</div>
+              <div class="stat-value" id="stat-uptime" style="font-size:1.25rem;padding-top:.4rem">—</div>
+              <div class="stat-icon">🕐</div>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="chart-grid">
+            <div class="chart-card">
+              <div class="chart-title">API Requests — Last 24 Hours</div>
+              <div class="chart-wrap"><div style="min-width: 600px; height: 100%;"><canvas id="chart-line"></canvas></div></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Command Breakdown</div>
+              <div class="chart-wrap"><div style="min-width: 300px; height: 100%;"><canvas id="chart-donut"></canvas></div></div>
+            </div>
+          </div>
+
+          <!-- Error Table -->
+          <div class="table-card">
+            <div class="chart-title">Error Log by Status Code</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Status Code</th>
+                  <th>Count</th>
+                  <th>Severity</th>
+                </tr>
+              </thead>
+              <tbody id="error-table-body">
+                <tr>
+                  <td colspan="3" class="empty-state">No errors recorded 🎉</td>
+                </tr>
+              </tbody>
+            </table>
+            <button class="reset-btn" onclick="resetMetrics()">↺ Reset All Metrics</button>
+          </div>
         </div>
 
-        <!-- Stat Cards -->
-        <div class="stat-grid">
-          <div class="stat-card">
-            <div class="stat-label">API Requests</div>
-            <div class="stat-value" id="stat-requests">—</div>
-            <div class="stat-icon">📡</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Commands Used</div>
-            <div class="stat-value" id="stat-commands">—</div>
-            <div class="stat-icon">⚡</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">API Errors</div>
-            <div class="stat-value" id="stat-errors" style="color:var(--error)">—</div>
-            <div class="stat-icon">⚠️</div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-label">Uptime</div>
-            <div class="stat-value" id="stat-uptime" style="font-size:1.25rem;padding-top:.4rem">—</div>
-            <div class="stat-icon">🕐</div>
-          </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="chart-grid">
-          <div class="chart-card">
-            <div class="chart-title">API Requests — Last 24 Hours</div>
-            <div class="chart-wrap"><div style="min-width: 600px; height: 100%;"><canvas id="chart-line"></canvas></div></div>
-          </div>
-          <div class="chart-card">
-            <div class="chart-title">Command Breakdown</div>
-            <div class="chart-wrap"><div style="min-width: 300px; height: 100%;"><canvas id="chart-donut"></canvas></div></div>
-          </div>
-        </div>
-
-        <!-- Error Table -->
-        <div class="table-card">
-          <div class="chart-title">Error Log by Status Code</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Status Code</th>
-                <th>Count</th>
-                <th>Severity</th>
-              </tr>
-            </thead>
-            <tbody id="error-table-body">
-              <tr>
-                <td colspan="3" class="empty-state">No errors recorded 🎉</td>
-              </tr>
-            </tbody>
-          </table>
-          <button class="reset-btn" onclick="resetMetrics()">↺ Reset All Metrics</button>
-        </div>
-      </div>
-
-      <!-- ===== INTERACTIONS TAB ===== -->
-      <div class="tab-panel" id="tab-interactions">
-        <div class="page-header">
-          <h1 class="page-title">Interactions</h1>
-          <p class="page-sub">Send announcements to Discord channels via the bot</p>
-        </div>
-
-        <div class="interactions-grid">
-          <!-- Compose form -->
-          <div class="form-card">
-            <div class="form-title">Send Announcement</div>
-
-            <label class="field-label" for="channel-select">Target Channel</label>
-            <select id="channel-select">
-              <option value="">Loading channels…</option>
-            </select>
-
-            <label class="field-label" for="msg-content">Message</label>
-            <textarea id="msg-content" placeholder="Write your announcement here…" maxlength="2000"
-              oninput="updateCharCount()"></textarea>
-            <div class="char-count" id="char-count">0 / 2000</div>
-
-            <button class="send-btn" id="send-btn" onclick="sendMessage()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="22" y1="2" x2="11" y2="13" />
-                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-              </svg>
-              Send to Discord
-            </button>
-            <div class="feedback" id="send-feedback"></div>
+        <!-- ===== INTERACTIONS TAB ===== -->
+        <div class="tab-panel" id="tab-interactions">
+          <div class="page-header">
+            <h1 class="page-title">Interactions</h1>
+            <p class="page-sub">Send announcements to Discord channels via the bot</p>
           </div>
 
-          <!-- Announcement history -->
-          <div class="form-card">
-            <div class="form-title">Recent Announcements</div>
-            <div id="ann-history">
-              <div class="empty-state">No announcements sent yet.</div>
+          <div class="interactions-grid">
+            <!-- Compose form -->
+            <div class="form-card">
+              <div class="form-title">Send Announcement</div>
+
+              <label class="field-label" for="channel-select">Target Channel</label>
+              <select id="channel-select">
+                <option value="">Loading channels…</option>
+              </select>
+
+              <label class="field-label" for="msg-content">Message</label>
+              <textarea id="msg-content" placeholder="Write your announcement here…" maxlength="2000"
+                oninput="updateCharCount()"></textarea>
+              <div class="char-count" id="char-count">0 / 2000</div>
+
+              <button class="send-btn" id="send-btn" onclick="sendMessage()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="22" y1="2" x2="11" y2="13" />
+                  <polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+                Send to Discord
+              </button>
+              <div class="feedback" id="send-feedback"></div>
+            </div>
+
+            <!-- Announcement history -->
+            <div class="form-card">
+              <div class="form-title">Recent Announcements</div>
+              <div id="ann-history">
+                <div class="empty-state">No announcements sent yet.</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- ===== CONSOLE TAB ===== -->
-      <div class="tab-panel" id="tab-console">
-        <div class="console-header">
-          <div>
-            <h1 class="page-title">Live Console</h1>
-            <p class="page-sub">Real-time application logs via SSE</p>
+        <!-- ===== CONSOLE TAB ===== -->
+        <div class="tab-panel" id="tab-console">
+          <div class="console-header">
+            <div>
+              <h1 class="page-title">Live Console</h1>
+              <p class="page-sub">Real-time application logs via SSE</p>
+            </div>
+            <div class="console-actions">
+              <button class="console-btn active" id="btn-autoscroll" onclick="toggleAutoScroll()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <polyline points="19 12 12 19 5 12" />
+                </svg>
+                Auto-Scroll
+              </button>
+              <button class="console-btn" onclick="clearConsole()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                Clear
+              </button>
+            </div>
           </div>
-          <div class="console-actions">
-            <button class="console-btn active" id="btn-autoscroll" onclick="toggleAutoScroll()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <polyline points="19 12 12 19 5 12" />
-              </svg>
-              Auto-Scroll
-            </button>
-            <button class="console-btn" onclick="clearConsole()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              Clear
-            </button>
-          </div>
-        </div>
-        <div class="console-window" id="console-window">
-          <div class="empty-state">Connecting to log stream...</div>
-        </div>
-      </div>
-
-      <!-- ===== HISTORY TAB ===== -->
-      <div class="tab-panel" id="tab-history">
-        <div class="page-header">
-          <h1 class="page-title">Use History</h1>
-          <p class="page-sub">Historical log of mentions and commands</p>
-        </div>
-
-        <div class="flex-responsive" style="display:flex; gap:1rem; margin-bottom:1.5rem">
-          <div style="flex:1">
-            <label class="field-label">Select Server</label>
-            <select id="history-server-select" onchange="loadHistoryChannels()">
-              <option value="">Loading servers...</option>
-            </select>
-          </div>
-          <div style="flex:1">
-            <label class="field-label">Select Channel</label>
-            <select id="history-channel-select" onchange="loadHistoryLogs()">
-              <option value="">Select a server first</option>
-            </select>
+          <div class="console-window" id="console-window">
+            <div class="empty-state">Connecting to log stream...</div>
           </div>
         </div>
 
-        <div class="chart-card" style="margin-bottom:1.5rem">
-          <div class="chart-title">Channel Activity (Last 24 Hours)</div>
-          <div class="chart-wrap" style="height:150px"><div style="min-width: 600px; height: 100%;"><canvas id="chart-history"></canvas></div></div>
+        <!-- ===== HISTORY TAB ===== -->
+        <div class="tab-panel" id="tab-history">
+          <div class="page-header">
+            <h1 class="page-title">Use History</h1>
+            <p class="page-sub">Historical log of mentions and commands</p>
+          </div>
+
+          <div class="flex-responsive" style="display:flex; gap:1rem; margin-bottom:1.5rem">
+            <div style="flex:1">
+              <label class="field-label">Select Server</label>
+              <select id="history-server-select" onchange="loadHistoryChannels()">
+                <option value="">Loading servers...</option>
+              </select>
+            </div>
+            <div style="flex:1">
+              <label class="field-label">Select Channel</label>
+              <select id="history-channel-select" onchange="loadHistoryLogs()">
+                <option value="">Select a server first</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="chart-card" style="margin-bottom:1.5rem">
+            <div class="chart-title">Channel Activity (Last 24 Hours)</div>
+            <div class="chart-wrap" style="height:150px"><div style="min-width: 600px; height: 100%;"><canvas id="chart-history"></canvas></div></div>
+          </div>
+
+          <div class="table-card">
+            <div class="chart-title">Interaction Logs</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>User</th>
+                  <th>Type</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody id="history-table-body">
+                <tr>
+                  <td colspan="4" class="empty-state">Select a channel to view history</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div class="table-card">
-          <div class="chart-title">Interaction Logs</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>User</th>
-                <th>Type</th>
-                <th>Details</th>
-              </tr>
-            </thead>
-            <tbody id="history-table-body">
-              <tr>
-                <td colspan="4" class="empty-state">Select a channel to view history</td>
-              </tr>
-            </tbody>
-          </table>
+      </main>
+    </div>
+
+    <!-- Logout Confirmation Modal -->
+    <div class="modal-overlay" id="logout-modal">
+      <div class="modal-card">
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
         </div>
-      </div>
-
-    </main>
-  </div>
-
-  <!-- Logout Confirmation Modal -->
-  <div class="modal-overlay" id="logout-modal">
-    <div class="modal-card">
-      <div class="modal-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="var(--error)" stroke-width="2">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1="12" y1="9" x2="12" y2="13" />
-          <line x1="12" y1="17" x2="12.01" y2="17" />
-        </svg>
-      </div>
-      <h3 class="modal-title">Are you sure?</h3>
-      <p class="modal-subtitle">You are about to log out. You will need to sign in again to access the dashboard.</p>
-      <div class="modal-actions">
-        <a href="/logout" class="btn-danger">Logout</a>
-        <button class="btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+        <h3 class="modal-title">Are you sure?</h3>
+        <p class="modal-subtitle">You are about to log out. You will need to sign in again to access the dashboard.</p>
+        <div class="modal-actions">
+          <a href="/logout" class="btn-danger">Logout</a>
+          <button class="btn-cancel" onclick="closeLogoutModal()">Cancel</button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    // ─── Modals ───────────────────────────────────────────────────────────────────
-    function openLogoutModal(e) {
-      e.preventDefault();
-      document.getElementById('logout-modal').classList.add('active');
-    }
-    
-    function closeLogoutModal() {
-      document.getElementById('logout-modal').classList.remove('active');
-    }
-
-    // ─── Tab Switching ────────────────────────────────────────────────────────────
-    function switchTab(name) {
-      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      document.getElementById('tab-' + name).classList.add('active');
-      document.getElementById('nav-' + name).classList.add('active');
-      if (window.innerWidth <= 768) {
-        document.getElementById('sidebar').classList.remove('open');
-        document.getElementById('sidebar-overlay').classList.remove('show');
+    <script>
+      // ─── Modals ───────────────────────────────────────────────────────────────────
+      function openLogoutModal(e) {
+        e.preventDefault();
+        document.getElementById('logout-modal').classList.add('active');
       }
-    }
+      
+      function closeLogoutModal() {
+        document.getElementById('logout-modal').classList.remove('active');
+      }
 
-    function toggleSidebar() {
-      document.getElementById('sidebar').classList.toggle('open');
-      document.getElementById('sidebar-overlay').classList.toggle('show');
-    }
-
-    // ─── Charts ───────────────────────────────────────────────────────────────────
-    const PRIMARY = '#38bdf8';
-    const CHART_COLORS = ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#a78bfa', '#fb923c', '#e879f9', '#2dd4bf', '#a3e635', '#facc15'];
-
-    const lineCtx = document.getElementById('chart-line').getContext('2d');
-    const lineChart = new Chart(lineCtx, {
-      type: 'line',
-      data: {
-        labels: Array.from({ length: 24 }, (_, i) => {
-          const h = new Date(); h.setHours(h.getHours() - 23 + i);
-          return h.getHours() + ':00';
-        }),
-        datasets: [{
-          label: 'Requests',
-          data: Array(24).fill(0),
-          borderColor: PRIMARY,
-          backgroundColor: 'rgba(56,189,248,0.08)',
-          borderWidth: 2,
-          pointRadius: 3,
-          pointBackgroundColor: PRIMARY,
-          tension: 0.4,
-          fill: true,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 } },
-          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
+      // ─── Tab Switching ────────────────────────────────────────────────────────────
+      function switchTab(name) {
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        document.getElementById('nav-' + name).classList.add('active');
+        if (window.innerWidth <= 768) {
+          document.getElementById('sidebar').classList.remove('open');
+          document.getElementById('sidebar-overlay').classList.remove('show');
         }
       }
-    });
 
-    const donutCtx = document.getElementById('chart-donut').getContext('2d');
-    const donutChart = new Chart(donutCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['No Data'],
-        datasets: [{
-          data: [1],
-          backgroundColor: ['#334155'],
-          borderWidth: 0,
-          hoverOffset: 8,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        cutout: '68%',
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { color: '#94a3b8', font: { size: 12 }, padding: 16, usePointStyle: true }
+      function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+        document.getElementById('sidebar-overlay').classList.toggle('show');
+      }
+
+      // ─── Charts ───────────────────────────────────────────────────────────────────
+      const PRIMARY = '#38bdf8';
+      const CHART_COLORS = ['#38bdf8', '#818cf8', '#34d399', '#f472b6', '#a78bfa', '#fb923c', '#e879f9', '#2dd4bf', '#a3e635', '#facc15'];
+
+      const lineCtx = document.getElementById('chart-line').getContext('2d');
+      const lineChart = new Chart(lineCtx, {
+        type: 'line',
+        data: {
+          labels: Array.from({ length: 24 }, (_, i) => {
+            const h = new Date(); h.setHours(h.getHours() - 23 + i);
+            return h.getHours() + ':00';
+          }),
+          datasets: [{
+            label: 'Requests',
+            data: Array(24).fill(0),
+            borderColor: PRIMARY,
+            backgroundColor: 'rgba(56,189,248,0.08)',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: PRIMARY,
+            tension: 0.4,
+            fill: true,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
           }
         }
-      }
-    });
+      });
 
-    const histCtx = document.getElementById('chart-history').getContext('2d');
-    const histChart = new Chart(histCtx, {
-      type: 'bar',
-      data: {
-        labels: Array.from({ length: 24 }, (_, i) => {
-          const h = new Date(); h.setHours(h.getHours() - 23 + i);
-          return h.getHours() + ':00';
-        }),
-        datasets: [{
-          label: 'Interactions',
-          data: Array(24).fill(0),
-          backgroundColor: PRIMARY,
-          borderRadius: 4,
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 } },
-          y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
+      const donutCtx = document.getElementById('chart-donut').getContext('2d');
+      const donutChart = new Chart(donutCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['No Data'],
+          datasets: [{
+            data: [1],
+            backgroundColor: ['#334155'],
+            borderWidth: 0,
+            hoverOffset: 8,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          cutout: '68%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#94a3b8', font: { size: 12 }, padding: 16, usePointStyle: true }
+            }
+          }
         }
-      }
-    });
+      });
 
-    // ─── Metrics polling ─────────────────────────────────────────────────────────
-    async function fetchMetrics() {
-      try {
-        const r = await fetch('/api/metrics');
-        if (!r.ok) return;
-        const d = await r.json();
-
-        document.getElementById('stat-requests').textContent = d.total_requests.toLocaleString();
-        document.getElementById('stat-commands').textContent = d.total_commands.toLocaleString();
-        const errTotal = Object.values(d.error_counts).reduce((a, b) => a + b, 0);
-        document.getElementById('stat-errors').textContent = errTotal.toLocaleString();
-        document.getElementById('stat-uptime').textContent = d.uptime;
-
-        // Line chart
-        lineChart.data.datasets[0].data = d.requests_by_hour;
-        lineChart.update('none');
-
-        // Donut chart
-        const cmds = Object.keys(d.command_counts);
-        if (cmds.length === 0) {
-          donutChart.data.labels = ['No Data'];
-          donutChart.data.datasets[0].data = [1];
-          donutChart.data.datasets[0].backgroundColor = ['#334155'];
-        } else {
-          donutChart.data.labels = cmds.map(c => '/' + c);
-          donutChart.data.datasets[0].data = Object.values(d.command_counts);
-          donutChart.data.datasets[0].backgroundColor = cmds.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+      const histCtx = document.getElementById('chart-history').getContext('2d');
+      const histChart = new Chart(histCtx, {
+        type: 'bar',
+        data: {
+          labels: Array.from({ length: 24 }, (_, i) => {
+            const h = new Date(); h.setHours(h.getHours() - 23 + i);
+            return h.getHours() + ':00';
+          }),
+          datasets: [{
+            label: 'Interactions',
+            data: Array(24).fill(0),
+            backgroundColor: PRIMARY,
+            borderRadius: 4,
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 10 }, maxTicksLimit: 8 } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748b', font: { size: 10 } }, beginAtZero: true }
+          }
         }
-        donutChart.update('none');
+      });
 
-        // Error table
-        const tbody = document.getElementById('error-table-body');
-        const entries = Object.entries(d.error_counts);
-        if (!entries.length) {
-          tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No errors recorded 🎉</td></tr>';
-        } else {
-          tbody.innerHTML = entries.map(([code, count]) =>
-            `<tr>
-          <td><span class="badge badge-error">HTTP ${code}</span></td>
-          <td>${count}</td>
-          <td style="color:var(--muted);font-size:.8rem">${getSeverity(parseInt(code))}</td>
-        </tr>`
-          ).join('');
-        }
-
-        // Announcements
-        const hist = document.getElementById('ann-history');
-        if (!d.announcements.length) {
-          hist.innerHTML = '<div class="empty-state">No announcements sent yet.</div>';
-        } else {
-          hist.innerHTML = d.announcements.map(a =>
-            `<div class="ann-item">
-          <div class="ann-channel">${a.channel}</div>
-          <div class="ann-content">${escHtml(a.content)}</div>
-          <div class="ann-ts">${a.ts}</div>
-        </div>`
-          ).join('');
-        }
-      } catch (e) { console.error('Metrics fetch error:', e); }
-    }
-
-    function getSeverity(code) {
-      if (code >= 500) return 'Server Error';
-      if (code === 429) return 'Rate Limited';
-      if (code === 404) return 'Not Found';
-      if (code >= 400) return 'Client Error';
-      return 'Other';
-    }
-    function escHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
-
-    fetchMetrics();
-    setInterval(fetchMetrics, 10_000);
-
-    // ─── History Tab Logic ───────────────────────────────────────────────────────
-    async function loadHistoryServers() {
-      const sel = document.getElementById('history-server-select');
-      try {
-        const r = await fetch('/api/history/servers');
-        const d = await r.json();
-        if (!d.servers || !d.servers.length) {
-          sel.innerHTML = '<option value="">No servers found</option>';
-          return;
-        }
-        sel.innerHTML = '<option value="">Select a server</option>' + d.servers.map(s =>
-          `<option value="${s.id}">${s.name}</option>`
-        ).join('');
-      } catch (e) {
-        sel.innerHTML = '<option value="">Error loading servers</option>';
-      }
-    }
-
-    async function loadHistoryChannels() {
-      const serverId = document.getElementById('history-server-select').value;
-      const sel = document.getElementById('history-channel-select');
-      if (!serverId) {
-        sel.innerHTML = '<option value="">Select a server first</option>';
-        return;
-      }
-      try {
-        const r = await fetch(`/api/history/channels/${serverId}`);
-        const d = await r.json();
-        if (!d.channels || !d.channels.length) {
-          sel.innerHTML = '<option value="">No channels found</option>';
-          return;
-        }
-        sel.innerHTML = '<option value="">Select a channel</option>' + d.channels.map(c =>
-          `<option value="${c.id}">${c.name}</option>`
-        ).join('');
-      } catch (e) {
-        sel.innerHTML = '<option value="">Error loading channels</option>';
-      }
-    }
-
-    async function loadHistoryLogs() {
-      const channelId = document.getElementById('history-channel-select').value;
-      const tbody = document.getElementById('history-table-body');
-      if (!channelId) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Select a channel to view history</td></tr>';
-        return;
-      }
-      try {
-        const r = await fetch(`/api/history/logs/${channelId}`);
-        const d = await r.json();
-
-        // Update Graph
-        histChart.data.datasets[0].data = d.graph;
-        histChart.update('none');
-
-        // Update Logs
-        if (!d.logs || !d.logs.length) {
-          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No history recorded for this channel</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = d.logs.map(log => {
-          const dt = new Date(log.timestamp * 1000);
-          const ts = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString();
-          const typeBadge = log.action_type === 'command'
-            ? '<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8">CMD</span>'
-            : '<span class="badge" style="background:rgba(167,139,250,0.15);color:#a78bfa">PING</span>';
-          return `<tr>
-              <td style="color:var(--muted)">${ts}</td>
-              <td style="font-weight:500">${escHtml(log.user_name)}</td>
-              <td>${typeBadge}</td>
-              <td>${escHtml(log.action_detail)}</td>
-           </tr>`;
-        }).join('');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="color:var(--error)">Error loading history</td></tr>';
-      }
-    }
-
-    // Load servers on start
-    loadHistoryServers();
-
-    // ─── Reset metrics ────────────────────────────────────────────────────────────
-    async function resetMetrics() {
-      if (!confirm('Reset all metrics? This cannot be undone.')) return;
-      await fetch('/api/metrics/reset', { method: 'POST' });
-      fetchMetrics();
-    }
-
-    // ─── Load channels ───────────────────────────────────────────────────────────
-    async function loadChannels() {
-      const sel = document.getElementById('channel-select');
-      try {
-        const r = await fetch('/api/channels');
-        const d = await r.json();
-        if (!d.channels || !d.channels.length) {
-          sel.innerHTML = '<option value="">No channels found</option>';
-          return;
-        }
-        sel.innerHTML = d.channels.map(c =>
-          `<option value="${c.id}">${c.name} — ${c.guild}</option>`
-        ).join('');
-      } catch (e) {
-        sel.innerHTML = '<option value="">Error loading channels</option>';
-      }
-    }
-    loadChannels();
-
-    // ─── Character count ─────────────────────────────────────────────────────────
-    function updateCharCount() {
-      const len = document.getElementById('msg-content').value.length;
-      const el = document.getElementById('char-count');
-      el.textContent = len + ' / 2000';
-      el.classList.toggle('warn', len > 1800);
-    }
-
-    // ─── Send message ─────────────────────────────────────────────────────────────
-    async function sendMessage() {
-      const channelId = document.getElementById('channel-select').value;
-      const content = document.getElementById('msg-content').value.trim();
-      const btn = document.getElementById('send-btn');
-      const fb = document.getElementById('send-feedback');
-
-      if (!channelId) { showFeedback(fb, 'Please select a channel.', false); return; }
-      if (!content) { showFeedback(fb, 'Message cannot be empty.', false); return; }
-
-      btn.disabled = true;
-      btn.innerHTML = '<div class="spinner"></div> Sending…';
-
-      try {
-        const r = await fetch('/api/send-message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ channel_id: channelId, content })
-        });
-        const d = await r.json();
-        if (r.ok && d.ok) {
-          showFeedback(fb, `✓ Sent to ${d.channel}`, true);
-          document.getElementById('msg-content').value = '';
-          updateCharCount();
-          fetchMetrics();
-        } else {
-          showFeedback(fb, '✗ ' + (d.error || 'Unknown error'), false);
-        }
-      } catch (e) {
-        showFeedback(fb, '✗ Network error', false);
-      }
-
-      btn.disabled = false;
-      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send to Discord';
-    }
-
-    function showFeedback(el, msg, ok) {
-      el.textContent = msg;
-      el.className = 'feedback ' + (ok ? 'ok' : 'err');
-      el.style.display = 'block';
-      setTimeout(() => { el.style.display = 'none'; }, 4000);
-    }
-
-    // ─── Live Console (SSE) ───────────────────────────────────────────────────────
-    let autoScroll = true;
-    let consoleStream = null;
-    const consoleWindow = document.getElementById('console-window');
-
-    function toggleAutoScroll() {
-      autoScroll = !autoScroll;
-      document.getElementById('btn-autoscroll').classList.toggle('active', autoScroll);
-      if (autoScroll) {
-        consoleWindow.scrollTop = consoleWindow.scrollHeight;
-      }
-    }
-
-    function clearConsole() {
-      consoleWindow.innerHTML = '<div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-level log-INFO">INFO</span><span class="log-msg">Console cleared.</span></div>';
-    }
-
-    function initConsoleStream() {
-      if (consoleStream) return;
-      consoleWindow.innerHTML = ''; // clear loading state
-      consoleStream = new EventSource('/api/logs/stream');
-
-      consoleStream.onmessage = function (event) {
+      // ─── Metrics polling ─────────────────────────────────────────────────────────
+      async function fetchMetrics() {
         try {
-          const data = JSON.parse(event.data);
+          const r = await fetch('/api/metrics');
+          if (!r.ok) return;
+          const d = await r.json();
+
+          document.getElementById('stat-requests').textContent = d.total_requests.toLocaleString();
+          document.getElementById('stat-commands').textContent = d.total_commands.toLocaleString();
+          const errTotal = Object.values(d.error_counts).reduce((a, b) => a + b, 0);
+          document.getElementById('stat-errors').textContent = errTotal.toLocaleString();
+          document.getElementById('stat-uptime').textContent = d.uptime;
+
+          // Line chart
+          lineChart.data.datasets[0].data = d.requests_by_hour;
+          lineChart.update('none');
+
+          // Donut chart
+          const cmds = Object.keys(d.command_counts);
+          if (cmds.length === 0) {
+            donutChart.data.labels = ['No Data'];
+            donutChart.data.datasets[0].data = [1];
+            donutChart.data.datasets[0].backgroundColor = ['#334155'];
+          } else {
+            donutChart.data.labels = cmds.map(c => '/' + c);
+            donutChart.data.datasets[0].data = Object.values(d.command_counts);
+            donutChart.data.datasets[0].backgroundColor = cmds.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+          }
+          donutChart.update('none');
+
+          // Error table
+          const tbody = document.getElementById('error-table-body');
+          const entries = Object.entries(d.error_counts);
+          if (!entries.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="empty-state">No errors recorded 🎉</td></tr>';
+          } else {
+            tbody.innerHTML = entries.map(([code, count]) =>
+              `<tr>
+            <td><span class="badge badge-error">HTTP ${code}</span></td>
+            <td>${count}</td>
+            <td style="color:var(--muted);font-size:.8rem">${getSeverity(parseInt(code))}</td>
+          </tr>`
+            ).join('');
+          }
+
+          // Announcements
+          const hist = document.getElementById('ann-history');
+          if (!d.announcements.length) {
+            hist.innerHTML = '<div class="empty-state">No announcements sent yet.</div>';
+          } else {
+            hist.innerHTML = d.announcements.map(a =>
+              `<div class="ann-item">
+            <div class="ann-channel">${a.channel}</div>
+            <div class="ann-content">${escHtml(a.content)}</div>
+            <div class="ann-ts">${a.ts}</div>
+          </div>`
+            ).join('');
+          }
+        } catch (e) { console.error('Metrics fetch error:', e); }
+      }
+
+      function getSeverity(code) {
+        if (code >= 500) return 'Server Error';
+        if (code === 429) return 'Rate Limited';
+        if (code === 404) return 'Not Found';
+        if (code >= 400) return 'Client Error';
+        return 'Other';
+      }
+      function escHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+
+      fetchMetrics();
+      setInterval(fetchMetrics, 10_000);
+
+      // ─── History Tab Logic ───────────────────────────────────────────────────────
+      async function loadHistoryServers() {
+        const sel = document.getElementById('history-server-select');
+        try {
+          const r = await fetch('/api/history/servers');
+          const d = await r.json();
+          if (!d.servers || !d.servers.length) {
+            sel.innerHTML = '<option value="">No servers found</option>';
+            return;
+          }
+          sel.innerHTML = '<option value="">Select a server</option>' + d.servers.map(s =>
+            `<option value="${s.id}">${s.name}</option>`
+          ).join('');
+        } catch (e) {
+          sel.innerHTML = '<option value="">Error loading servers</option>';
+        }
+      }
+
+      async function loadHistoryChannels() {
+        const serverId = document.getElementById('history-server-select').value;
+        const sel = document.getElementById('history-channel-select');
+        if (!serverId) {
+          sel.innerHTML = '<option value="">Select a server first</option>';
+          return;
+        }
+        try {
+          const r = await fetch(`/api/history/channels/${serverId}`);
+          const d = await r.json();
+          if (!d.channels || !d.channels.length) {
+            sel.innerHTML = '<option value="">No channels found</option>';
+            return;
+          }
+          sel.innerHTML = '<option value="">Select a channel</option>' + d.channels.map(c =>
+            `<option value="${c.id}">${c.name}</option>`
+          ).join('');
+        } catch (e) {
+          sel.innerHTML = '<option value="">Error loading channels</option>';
+        }
+      }
+
+      async function loadHistoryLogs() {
+        const channelId = document.getElementById('history-channel-select').value;
+        const tbody = document.getElementById('history-table-body');
+        if (!channelId) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state">Select a channel to view history</td></tr>';
+          return;
+        }
+        try {
+          const r = await fetch(`/api/history/logs/${channelId}`);
+          const d = await r.json();
+
+          // Update Graph
+          histChart.data.datasets[0].data = d.graph;
+          histChart.update('none');
+
+          // Update Logs
+          if (!d.logs || !d.logs.length) {
+            tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No history recorded for this channel</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = d.logs.map(log => {
+            const dt = new Date(log.timestamp * 1000);
+            const ts = dt.toLocaleDateString() + ' ' + dt.toLocaleTimeString();
+            const typeBadge = log.action_type === 'command'
+              ? '<span class="badge" style="background:rgba(56,189,248,0.15);color:#38bdf8">CMD</span>'
+              : '<span class="badge" style="background:rgba(167,139,250,0.15);color:#a78bfa">PING</span>';
+            return `<tr>
+                <td style="color:var(--muted)">${ts}</td>
+                <td style="font-weight:500">${escHtml(log.user_name)}</td>
+                <td>${typeBadge}</td>
+                <td>${escHtml(log.action_detail)}</td>
+            </tr>`;
+          }).join('');
+        } catch (e) {
+          tbody.innerHTML = '<tr><td colspan="4" class="empty-state" style="color:var(--error)">Error loading history</td></tr>';
+        }
+      }
+
+      // Load servers on start
+      loadHistoryServers();
+
+      // ─── Reset metrics ────────────────────────────────────────────────────────────
+      async function resetMetrics() {
+        if (!confirm('Reset all metrics? This cannot be undone.')) return;
+        await fetch('/api/metrics/reset', { method: 'POST' });
+        fetchMetrics();
+      }
+
+      // ─── Load channels ───────────────────────────────────────────────────────────
+      async function loadChannels() {
+        const sel = document.getElementById('channel-select');
+        try {
+          const r = await fetch('/api/channels');
+          const d = await r.json();
+          if (!d.channels || !d.channels.length) {
+            sel.innerHTML = '<option value="">No channels found</option>';
+            return;
+          }
+          sel.innerHTML = d.channels.map(c =>
+            `<option value="${c.id}">${c.name} — ${c.guild}</option>`
+          ).join('');
+        } catch (e) {
+          sel.innerHTML = '<option value="">Error loading channels</option>';
+        }
+      }
+      loadChannels();
+
+      // ─── Character count ─────────────────────────────────────────────────────────
+      function updateCharCount() {
+        const len = document.getElementById('msg-content').value.length;
+        const el = document.getElementById('char-count');
+        el.textContent = len + ' / 2000';
+        el.classList.toggle('warn', len > 1800);
+      }
+
+      // ─── Send message ─────────────────────────────────────────────────────────────
+      async function sendMessage() {
+        const channelId = document.getElementById('channel-select').value;
+        const content = document.getElementById('msg-content').value.trim();
+        const btn = document.getElementById('send-btn');
+        const fb = document.getElementById('send-feedback');
+
+        if (!channelId) { showFeedback(fb, 'Please select a channel.', false); return; }
+        if (!content) { showFeedback(fb, 'Message cannot be empty.', false); return; }
+
+        btn.disabled = true;
+        btn.innerHTML = '<div class="spinner"></div> Sending…';
+
+        try {
+          const r = await fetch('/api/send-message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ channel_id: channelId, content })
+          });
+          const d = await r.json();
+          if (r.ok && d.ok) {
+            showFeedback(fb, `✓ Sent to ${d.channel}`, true);
+            document.getElementById('msg-content').value = '';
+            updateCharCount();
+            fetchMetrics();
+          } else {
+            showFeedback(fb, '✗ ' + (d.error || 'Unknown error'), false);
+          }
+        } catch (e) {
+          showFeedback(fb, '✗ Network error', false);
+        }
+
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg> Send to Discord';
+      }
+
+      function showFeedback(el, msg, ok) {
+        el.textContent = msg;
+        el.className = 'feedback ' + (ok ? 'ok' : 'err');
+        el.style.display = 'block';
+        setTimeout(() => { el.style.display = 'none'; }, 4000);
+      }
+
+      // ─── Live Console (SSE) ───────────────────────────────────────────────────────
+      let autoScroll = true;
+      let consoleStream = null;
+      const consoleWindow = document.getElementById('console-window');
+
+      function toggleAutoScroll() {
+        autoScroll = !autoScroll;
+        document.getElementById('btn-autoscroll').classList.toggle('active', autoScroll);
+        if (autoScroll) {
+          consoleWindow.scrollTop = consoleWindow.scrollHeight;
+        }
+      }
+
+      function clearConsole() {
+        consoleWindow.innerHTML = '<div class="log-entry"><span class="log-ts">--:--:--</span><span class="log-level log-INFO">INFO</span><span class="log-msg">Console cleared.</span></div>';
+      }
+
+      function initConsoleStream() {
+        if (consoleStream) return;
+        consoleWindow.innerHTML = ''; // clear loading state
+        consoleStream = new EventSource('/api/logs/stream');
+
+        consoleStream.onmessage = function (event) {
+          try {
+            const data = JSON.parse(event.data);
+            const div = document.createElement('div');
+            div.className = 'log-entry';
+            div.innerHTML = `
+          <span class="log-ts">${data.ts}</span>
+          <span class="log-level log-${data.level}">${data.level}</span>
+          <span class="log-name">[${data.name}]</span>
+          <span class="log-msg">${escHtml(data.msg)}</span>
+        `;
+            consoleWindow.appendChild(div);
+
+            // Limit DOM nodes to prevent lag
+            if (consoleWindow.childElementCount > 400) {
+              consoleWindow.removeChild(consoleWindow.firstElementChild);
+            }
+
+            if (autoScroll) {
+              consoleWindow.scrollTop = consoleWindow.scrollHeight;
+            }
+          } catch (e) { } // ignore invalid json (like keep-alive ping)
+        };
+
+        consoleStream.onerror = function () {
           const div = document.createElement('div');
           div.className = 'log-entry';
-          div.innerHTML = `
-        <span class="log-ts">${data.ts}</span>
-        <span class="log-level log-${data.level}">${data.level}</span>
-        <span class="log-name">[${data.name}]</span>
-        <span class="log-msg">${escHtml(data.msg)}</span>
-      `;
+          div.innerHTML = `<span class="log-ts">${new Date().toLocaleTimeString()}</span><span class="log-level log-ERROR">ERROR</span><span class="log-msg" style="color:var(--error)">Connection lost. Reconnecting...</span>`;
           consoleWindow.appendChild(div);
-
-          // Limit DOM nodes to prevent lag
-          if (consoleWindow.childElementCount > 400) {
-            consoleWindow.removeChild(consoleWindow.firstElementChild);
-          }
-
-          if (autoScroll) {
-            consoleWindow.scrollTop = consoleWindow.scrollHeight;
-          }
-        } catch (e) { } // ignore invalid json (like keep-alive ping)
-      };
-
-      consoleStream.onerror = function () {
-        const div = document.createElement('div');
-        div.className = 'log-entry';
-        div.innerHTML = `<span class="log-ts">${new Date().toLocaleTimeString()}</span><span class="log-level log-ERROR">ERROR</span><span class="log-msg" style="color:var(--error)">Connection lost. Reconnecting...</span>`;
-        consoleWindow.appendChild(div);
-        if (autoScroll) consoleWindow.scrollTop = consoleWindow.scrollHeight;
-      };
-    }
-
-    // Connect to console stream when the tab is opened to save resources
-    const originalSwitchTab = switchTab;
-    switchTab = function (name) {
-      originalSwitchTab(name);
-      if (name === 'console') {
-        initConsoleStream();
+          if (autoScroll) consoleWindow.scrollTop = consoleWindow.scrollHeight;
+        };
       }
-    };
-  </script>
-</body>
 
-</html>
+      // Connect to console stream when the tab is opened to save resources
+      const originalSwitchTab = switchTab;
+      switchTab = function (name) {
+        originalSwitchTab(name);
+        if (name === 'console') {
+          initConsoleStream();
+        }
+      };
+    </script>
+  </body>
+
+  </html>

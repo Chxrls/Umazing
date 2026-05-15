@@ -10,7 +10,6 @@ import aiohttp
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
-from matplotlib import text
 
 # Metrics — imported lazily to avoid circular import when web.py is not present
 try:
