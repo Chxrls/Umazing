@@ -209,7 +209,73 @@ async def fetch_latest_news(count: int = 5) -> tuple[int, list | None]:
 
 # For slash commands sections
 
+
+# HELP
+
+@tree.command(name="help", description="List all available commands, or get details on a specific command.")
+@app_commands.describe(command="The command to get details on (optional)")
+async def cmd_help(interaction: discord.Interaction, command: Optional[str] = None):
+    _record_command("help", interaction)
+    try:
+        await interaction.response.defer()
+    except (discord.NotFound, discord.HTTPException):
+        return
+
+    all_commands = {cmd.name: cmd for cmd in tree.get_commands() if cmd.name != "help"}
+
+    # Specific command lookup
+    if command:
+        cmd = all_commands.get(command.lower().lstrip("/"))
+        if cmd is None:
+            embed = discord.Embed(
+                title="Command Not Found",
+                description=f"No command named `/{command}` exists.\nUse `/help` to see all available commands.",
+                color=EMBED_ERROR_COLOR,
+            )
+            await interaction.followup.send(embed=embed)
+            return
+
+        embed = discord.Embed(
+            title=f"`/{cmd.name}`",
+            description=cmd.description,
+            color=EMBED_COLOR,
+        )
+
+        if hasattr(cmd, "parameters") and cmd.parameters:
+            for param in cmd.parameters:
+                required = "Required" if param.required else "Optional"
+                embed.add_field(
+                    name=f"{required} — `{param.name}` {param.description}",
+                    value=f" ",
+                    inline=False,
+                )
+
+        else:
+            embed.add_field(name="Parameters", value="This command has no parameters.", inline=False)
+
+        await interaction.followup.send(embed=embed)
+        return
+
+    # Full command list
+    embed = discord.Embed(
+        title="Umamusume Bot — Commands",
+        description="Here are all available commands. Use `/help <command>` for more details.",
+        color=EMBED_COLOR,
+    )
+
+    for cmd in all_commands.values():
+
+        embed.add_field(
+            name=f"`/{cmd.name}` — {cmd.description}",
+            value=" ",
+            inline=False,
+        )
+
+    await interaction.followup.send(embed=embed)
+
+
 # CHARACTER
+
 @tree.command(name="character", description="Look up an Umamusume character by name.")
 @app_commands.describe(
     name="Character name (e.g. 'Sakura Bakushin O')",
